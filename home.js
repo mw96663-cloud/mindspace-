@@ -2,61 +2,49 @@
 "use strict";
 
 /*
- * Mindspace Plus-Plus
- * home.js v4
+ * Mindspace Plus-Plus | home.js v5
  *
- * 保留：
- * 1. 首頁背景
- * 2. 黃色／紫色積木拖曳
- * 3. 中央插槽判定
- * 4. 磁吸與閃光動畫
- * 5. 自由創作模式
- * 6. 神秘題目背景與 10 個關卡
- * 7. 小屋返回首頁
- * 8. 星星顯示與對外 API
- * 9. 關卡主題事件
+ * 首頁：
+ * - 圖片背景
+ * - 黃色／紫色積木拖曳
+ * - 中央插槽磁吸
  *
- * 新增：
- * 1. 小小迷宮設計師 60 星星解鎖
- * 2. 解鎖確認視窗
- * 3. 點數不足提示
- * 4. 鎖頭震動、封印碎裂、星光特效
- * 5. localStorage 保存星星與解鎖狀態
- * 6. 防止連續點擊重複扣款
+ * 神秘題目：
+ * - 10 個關卡
+ * - 4 個開放主題
+ * - 小小迷宮設計師 60 星星解鎖
+ * - 5 個問號關卡
+ * - 星星點數顯示
+ * - 返回首頁
+ * - 解鎖碎裂特效
+ * - 本機保存點數及解鎖狀態
  *
- * 不修改 OpenAI / GAS / 拍照 / 去背 /
- * 手動修整 / p5.js / 語音互動。
+ * v5 新增：
+ * - 長按星星欄 3 秒
+ * - 隱藏測試重置選單
+ * - 單獨重設鎖定／星星／全部
+ *
+ * 不修改 OpenAI、GAS、拍照、去背、
+ * p5.js、語音或既有創作世界。
  */
 
 (function () {
   if (window.MindspaceHome) return;
 
-  // ==========================================
-  // 01. 圖片路徑
-  // ==========================================
-
   const ASSETS = {
     background: "./assets/home-background.png",
     free: "./assets/free-block.png",
     mystery: "./assets/mystery-block.png",
-
     mysteryBackground: "./assets/mystery-background.png",
-
     ocean: "./assets/level-ocean.png",
     zoo: "./assets/level-zoo.png",
     food: "./assets/level-food.png",
     traffic: "./assets/level-traffic.png",
     maze: "./assets/level-maze.png",
-
     locked: "./assets/level-locked.png",
-
     starBar: "./assets/star-bar.png",
     homeButton: "./assets/home-button.png"
   };
-
-  // ==========================================
-  // 02. 設定
-  // ==========================================
 
   const CONFIG = {
     slot: {
@@ -65,32 +53,19 @@
       radiusX: 0.115,
       radiusY: 0.17
     },
-
-    free: {
-      x: 0.30,
-      y: 0.79
-    },
-
-    mystery: {
-      x: 0.70,
-      y: 0.79
-    },
-
+    free: { x: 0.30, y: 0.79 },
+    mystery: { x: 0.70, y: 0.79 },
     snapDuration: 350,
     enterDelay: 780,
-
     mazeUnlockCost: 60,
-    initialStars: 24
+    initialStars: 24,
+    adminHoldMs: 3000
   };
 
   const STORAGE = {
     stars: "mindspace-v4-stars",
     maze: "mindspace-v4-maze-unlocked"
   };
-
-  // ==========================================
-  // 03. 關卡資料
-  // ==========================================
 
   const LEVELS = [
     {
@@ -130,7 +105,7 @@
       name: "小小迷宮設計師",
       image: ASSETS.maze,
       unlocked: false,
-      unlockCost: CONFIG.mazeUnlockCost,
+      unlockCost: 60,
       x: 86,
       y: 39
     },
@@ -176,110 +151,78 @@
     }
   ];
 
-  // ==========================================
-  // 04. 安全讀寫儲存資料
-  // ==========================================
-
   function readStorage(key) {
     try {
-      return window.localStorage.getItem(key);
+      return localStorage.getItem(key);
     } catch (error) {
-      console.warn(
-        "[Mindspace] 無法讀取儲存資料",
-        error
-      );
+      console.warn("[Mindspace] 讀取失敗", error);
       return null;
     }
   }
 
   function writeStorage(key, value) {
     try {
-      window.localStorage.setItem(
-        key,
-        String(value)
-      );
+      localStorage.setItem(key, String(value));
       return true;
     } catch (error) {
-      console.warn(
-        "[Mindspace] 無法儲存資料",
-        error
-      );
+      console.warn("[Mindspace] 儲存失敗", error);
       return false;
     }
   }
 
   function readInitialStars() {
     const saved = readStorage(STORAGE.stars);
-
-    if (saved === null) {
-      return CONFIG.initialStars;
-    }
-
+    if (saved === null) return CONFIG.initialStars;
     const value = Number(saved);
-
-    if (!Number.isFinite(value)) {
-      return CONFIG.initialStars;
-    }
-
-    return Math.max(0, Math.floor(value));
+    return Number.isFinite(value)
+      ? Math.max(0, Math.floor(value))
+      : CONFIG.initialStars;
   }
-
-  // ==========================================
-  // 05. 全域狀態
-  // ==========================================
 
   let currentMode = "home";
   let selectedTheme = null;
-
   let dragging = null;
   let switching = false;
 
-  let home = null;
-  let stage = null;
-  let slot = null;
-  let flash = null;
-
-  let mysteryPage = null;
-  let mysteryStage = null;
-
-  let starNumber = null;
-  let notice = null;
-  let noticeTimer = null;
-
-  let unlockModal = null;
-  let unlockBalance = null;
-  let unlockConfirmButton = null;
+  let home;
+  let stage;
+  let slot;
+  let flash;
+  let mysteryPage;
+  let mysteryStage;
+  let starNumber;
+  let notice;
+  let unlockModal;
+  let unlockBalance;
+  let unlockConfirmButton;
+  let adminModal;
 
   let stars = readInitialStars();
-
   let mazeUnlocked =
     readStorage(STORAGE.maze) === "true";
 
   let unlockingMaze = false;
+  let noticeTimer = null;
+  let adminHoldTimer = null;
+  let adminPointerId = null;
+  let adminStartX = 0;
+  let adminStartY = 0;
 
   const levelButtons = new Map();
 
-  // ==========================================
-  // 06. CSS
-  // ==========================================
+  // =====================================
+  // 01. 樣式
+  // =====================================
 
   function createStyles() {
-    if (
-      document.getElementById(
-        "msImageHomeStyles"
-      )
-    ) {
+    if (document.getElementById("msImageHomeStyles")) {
       return;
     }
 
     const style = document.createElement("style");
-
     style.id = "msImageHomeStyles";
 
     style.textContent = `
-
-      /* ===== 首頁 ===== */
-
       #msHome {
         position: fixed;
         inset: 0;
@@ -295,20 +238,15 @@
         touch-action: none;
       }
 
-      #msHome.ms-hidden {
-        display: none;
-      }
+      #msHome.ms-hidden { display: none; }
 
       #msStage {
         position: relative;
         width: 100vw;
         height: 100dvh;
-        flex-shrink: 0;
         overflow: hidden;
-
-        background-image:
-          url("./assets/home-background.png");
-
+        flex-shrink: 0;
+        background-image: url("./assets/home-background.png");
         background-size: 100% 100%;
         background-position: center;
         background-repeat: no-repeat;
@@ -327,8 +265,7 @@
       }
 
       .ms-slot-hitbox.ms-near {
-        box-shadow:
-          0 0 35px 15px rgba(255,255,255,.4);
+        box-shadow: 0 0 35px 15px rgba(255,255,255,.4);
       }
 
       .ms-image-choice {
@@ -336,8 +273,8 @@
         width: 25.5%;
         height: 34%;
         padding: 0;
-        border: 0;
         margin: 0;
+        border: 0;
         background: transparent;
         cursor: grab;
         touch-action: none;
@@ -347,22 +284,18 @@
       }
 
       .ms-image-choice img {
-        display: block;
         width: 100%;
         height: 100%;
+        display: block;
         object-fit: contain;
         pointer-events: none;
-        user-select: none;
         -webkit-user-drag: none;
       }
 
       .ms-image-choice.dragging {
         cursor: grabbing;
         z-index: 30;
-        filter:
-          drop-shadow(
-            0 12px 15px rgba(0,0,0,.35)
-          );
+        filter: drop-shadow(0 12px 15px rgba(0,0,0,.35));
       }
 
       .ms-image-choice.snapping {
@@ -373,32 +306,22 @@
         z-index: 40;
       }
 
-      .ms-image-choice:focus-visible,
-      .ms-level:focus-visible,
-      .ms-mystery-home:focus-visible {
-        outline: 3px solid white;
-        outline-offset: 4px;
-      }
-
       .ms-home-instruction {
         position: absolute;
         left: 50%;
         bottom: 3%;
         transform: translateX(-50%);
         z-index: 5;
-
         color: white;
         background: rgba(38,24,69,.78);
         border: 2px solid rgba(255,255,255,.65);
         border-radius: 40px;
-
         padding: 10px 22px;
         font-size: clamp(12px,1.45vw,20px);
         font-weight: 800;
         text-align: center;
         white-space: nowrap;
         pointer-events: none;
-
         box-shadow: 0 5px 18px #0003;
       }
 
@@ -412,8 +335,7 @@
       }
 
       .ms-home-flash.active {
-        animation:
-          msImageFlash 650ms ease forwards;
+        animation: msImageFlash 650ms ease forwards;
       }
 
       @keyframes msImageFlash {
@@ -422,58 +344,42 @@
         100% { opacity: 0; }
       }
 
-      /* ===== 神秘題目頁 ===== */
-
       #msMysteryPage {
         position: fixed;
         inset: 0;
         z-index: 190;
         display: none;
         overflow: hidden;
-
         background: #8b614d;
         font-family: Arial, "Noto Sans TC", sans-serif;
         user-select: none;
         -webkit-user-select: none;
       }
 
-      #msMysteryPage.active {
-        display: block;
-      }
+      #msMysteryPage.active { display: block; }
 
       #msMysteryStage {
         position: absolute;
         inset: 0;
         overflow: hidden;
-
-        background-image:
-          url("./assets/mystery-background.png");
-
+        background-image: url("./assets/mystery-background.png");
         background-size: 100% 100%;
         background-position: center;
         background-repeat: no-repeat;
       }
 
-      /* ===== 關卡積木 ===== */
-
       .ms-level {
         position: absolute;
         width: 18%;
         height: 31%;
-
         padding: 0;
         margin: 0;
-        border: none;
+        border: 0;
         background: transparent;
-
         transform: translate(-50%, -50%);
         cursor: pointer;
         touch-action: manipulation;
-        -webkit-tap-highlight-color: transparent;
-
-        transition:
-          transform 180ms ease,
-          filter 180ms ease;
+        transition: transform 180ms ease, filter 180ms ease;
       }
 
       .ms-level img {
@@ -485,50 +391,40 @@
       }
 
       .ms-level.unlocked:hover {
-        transform:
-          translate(-50%, -50%) scale(1.07);
-
-        filter:
-          drop-shadow(
-            0 0 15px rgba(255,235,135,.9)
-          );
+        transform: translate(-50%, -50%) scale(1.07);
+        filter: drop-shadow(0 0 15px rgba(255,235,135,.9));
       }
 
       .ms-level.unlocked:active {
-        transform:
-          translate(-50%, -50%) scale(.96);
+        transform: translate(-50%, -50%) scale(.96);
       }
 
       .ms-level.locked:hover {
-        filter:
-          drop-shadow(
-            0 0 12px rgba(185,135,255,.75)
-          );
+        filter: drop-shadow(0 0 12px rgba(185,135,255,.75));
       }
 
-      /* ===== 小小迷宮設計師封印 ===== */
+      .ms-image-choice:focus-visible,
+      .ms-level:focus-visible,
+      .ms-mystery-home:focus-visible {
+        outline: 3px solid white;
+        outline-offset: 4px;
+      }
 
       .ms-maze-seal {
         position: absolute;
         inset: 5% 7% 8%;
         z-index: 2;
         pointer-events: none;
-
         border-radius: 25%;
-        background:
-          linear-gradient(
-            135deg,
-            rgba(83,35,170,.38),
-            rgba(37,15,95,.60)
-          );
-
-        border:
-          2px solid rgba(255,220,255,.65);
-
+        background: linear-gradient(
+          135deg,
+          rgba(83,35,170,.38),
+          rgba(37,15,95,.60)
+        );
+        border: 2px solid rgba(255,220,255,.65);
         box-shadow:
           inset 0 0 25px rgba(155,91,255,.4),
           0 0 15px rgba(175,113,255,.3);
-
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -538,68 +434,47 @@
 
       .ms-maze-lock {
         font-size: clamp(26px,4.5vw,76px);
-
-        filter:
-          drop-shadow(
-            0 4px 8px rgba(0,0,0,.55)
-          );
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,.55));
       }
 
       .ms-maze-cost {
         color: white;
         font-size: clamp(12px,1.55vw,27px);
         font-weight: 900;
-
         padding: 5px 13px;
         border-radius: 100px;
-
         background: rgba(35,20,53,.94);
         border: 2px solid #ffd36b;
-
-        box-shadow:
-          0 0 12px rgba(255,197,70,.5);
-
+        box-shadow: 0 0 12px rgba(255,197,70,.5);
         white-space: nowrap;
       }
 
       .ms-level.ms-maze-shaking {
-        animation:
-          msMazeShake 450ms ease-in-out;
+        animation: msMazeShake 450ms ease-in-out;
       }
 
       @keyframes msMazeShake {
-        0%, 100% {
-          transform: translate(-50%,-50%);
-        }
+        0%,100% { transform: translate(-50%,-50%); }
         15% {
-          transform:
-            translate(calc(-50% - 5px),-50%)
-            rotate(-2deg);
+          transform: translate(calc(-50% - 5px),-50%)
+          rotate(-2deg);
         }
         30% {
-          transform:
-            translate(calc(-50% + 5px),-50%)
-            rotate(2deg);
+          transform: translate(calc(-50% + 5px),-50%)
+          rotate(2deg);
         }
         45% {
-          transform:
-            translate(calc(-50% - 7px),-50%)
-            rotate(-3deg);
+          transform: translate(calc(-50% - 7px),-50%)
+          rotate(-3deg);
         }
         65% {
-          transform:
-            translate(calc(-50% + 6px),-50%)
-            rotate(2deg);
-        }
-        85% {
-          transform:
-            translate(calc(-50% - 2px),-50%);
+          transform: translate(calc(-50% + 6px),-50%)
+          rotate(2deg);
         }
       }
 
       .ms-maze-seal.breaking {
-        animation:
-          msSealBreak 500ms ease-out forwards;
+        animation: msSealBreak 500ms ease-out forwards;
       }
 
       @keyframes msSealBreak {
@@ -620,8 +495,6 @@
         }
       }
 
-      /* ===== 碎片與星光 ===== */
-
       .ms-unlock-particle {
         position: fixed;
         left: 0;
@@ -629,7 +502,6 @@
         z-index: 260;
         pointer-events: none;
         will-change: transform, opacity;
-
         animation:
           msParticleFly
           var(--duration,900ms)
@@ -640,48 +512,29 @@
       .ms-unlock-particle.shard {
         width: var(--size,15px);
         height: var(--size,15px);
-
-        background:
-          linear-gradient(
-            135deg,
-            #f5d9ff,
-            #b46aff 50%,
-            #6b36d7
-          );
-
+        background: linear-gradient(
+          135deg,#f5d9ff,#b46aff 50%,#6b36d7
+        );
         border: 1px solid #fff6ed;
-        box-shadow:
-          0 0 12px #dca3ff;
-
-        clip-path:
-          polygon(
-            50% 0%,
-            100% 28%,
-            72% 100%,
-            0% 72%,
-            18% 22%
-          );
+        box-shadow: 0 0 12px #dca3ff;
+        clip-path: polygon(
+          50% 0%,100% 28%,72% 100%,0% 72%,18% 22%
+        );
       }
 
       .ms-unlock-particle.spark {
         color: #ffda45;
         font-size: var(--size,22px);
-        text-shadow:
-          0 0 8px #fff3a0,
-          0 0 16px #ffc62c;
+        text-shadow: 0 0 8px #fff3a0,0 0 16px #ffc62c;
       }
 
       @keyframes msParticleFly {
         0% {
           opacity: 1;
           transform:
-            translate(-50%,-50%)
-            rotate(0deg)
-            scale(.6);
+            translate(-50%,-50%) rotate(0deg) scale(.6);
         }
-        30% {
-          opacity: 1;
-        }
+        30% { opacity: 1; }
         100% {
           opacity: 0;
           transform:
@@ -701,60 +554,41 @@
         height: 40px;
         border-radius: 50%;
         pointer-events: none;
-
-        background:
-          radial-gradient(
-            circle,
-            rgba(255,255,255,1) 0%,
-            rgba(255,226,101,.9) 25%,
-            rgba(188,101,255,.5) 55%,
-            transparent 75%
-          );
-
+        background: radial-gradient(
+          circle,
+          rgba(255,255,255,1) 0%,
+          rgba(255,226,101,.9) 25%,
+          rgba(188,101,255,.5) 55%,
+          transparent 75%
+        );
         transform: translate(-50%,-50%);
-        animation:
-          msUnlockBurst 650ms ease-out forwards;
+        animation: msUnlockBurst 650ms ease-out forwards;
       }
 
       @keyframes msUnlockBurst {
-        0% {
-          opacity: 0;
-          scale: .1;
-        }
-        25% {
-          opacity: 1;
-        }
-        100% {
-          opacity: 0;
-          scale: 9;
-        }
+        0% { opacity: 0; scale: .1; }
+        25% { opacity: 1; }
+        100% { opacity: 0; scale: 9; }
       }
 
       .ms-level.maze-revealed {
-        animation:
-          msMazeReveal 700ms ease-out;
+        animation: msMazeReveal 700ms ease-out;
       }
 
       @keyframes msMazeReveal {
         0% {
-          transform:
-            translate(-50%,-50%) scale(.75);
+          transform: translate(-50%,-50%) scale(.75);
           filter: brightness(3);
         }
         55% {
-          transform:
-            translate(-50%,-50%) scale(1.14);
-          filter:
-            drop-shadow(0 0 30px gold);
+          transform: translate(-50%,-50%) scale(1.14);
+          filter: drop-shadow(0 0 30px gold);
         }
         100% {
-          transform:
-            translate(-50%,-50%) scale(1);
+          transform: translate(-50%,-50%) scale(1);
           filter: brightness(1);
         }
       }
-
-      /* ===== 小屋按鍵 ===== */
 
       .ms-mystery-home {
         position: absolute;
@@ -762,7 +596,6 @@
         top: 2%;
         width: 10%;
         height: 16%;
-
         border: 0;
         padding: 0;
         background: transparent;
@@ -777,13 +610,8 @@
       }
 
       .ms-mystery-home:hover {
-        filter:
-          drop-shadow(
-            0 0 12px rgba(255,255,255,.9)
-          );
+        filter: drop-shadow(0 0 12px rgba(255,255,255,.9));
       }
-
-      /* ===== 星星計分條 ===== */
 
       .ms-star-bar {
         position: absolute;
@@ -792,6 +620,10 @@
         width: 17%;
         height: 12%;
         z-index: 10;
+        touch-action: none;
+        cursor: default;
+        -webkit-user-select: none;
+        user-select: none;
       }
 
       .ms-star-bar img {
@@ -799,6 +631,8 @@
         height: 100%;
         object-fit: fill;
         display: block;
+        pointer-events: none;
+        -webkit-user-drag: none;
       }
 
       .ms-star-number {
@@ -806,19 +640,12 @@
         left: 64%;
         top: 50%;
         transform: translate(-50%,-50%);
-
         color: white;
         font-weight: 900;
         font-size: clamp(14px,2.5vw,44px);
-
-        text-shadow:
-          0 3px 4px #000,
-          0 0 8px #0009;
-
+        text-shadow: 0 3px 4px #000,0 0 8px #0009;
         pointer-events: none;
       }
-
-      /* ===== 提示 ===== */
 
       .ms-mystery-notice {
         position: absolute;
@@ -826,86 +653,63 @@
         bottom: 4%;
         transform: translateX(-50%);
         z-index: 30;
-
         max-width: 85%;
         padding: 12px 25px;
         border-radius: 30px;
-
         background: rgba(43,25,65,.93);
         border: 2px solid #ffe5a5;
-
         color: white;
         font-size: clamp(13px,1.5vw,22px);
         font-weight: 800;
         text-align: center;
-
         opacity: 0;
         pointer-events: none;
         transition: opacity 200ms ease;
       }
 
-      .ms-mystery-notice.visible {
-        opacity: 1;
-      }
+      .ms-mystery-notice.visible { opacity: 1; }
 
-      /* ===== 解鎖確認視窗 ===== */
+      /* 解鎖視窗與測試選單共用樣式 */
 
-      .ms-unlock-modal {
+      .ms-unlock-modal,
+      .ms-admin-modal {
         position: fixed;
         inset: 0;
         z-index: 250;
-
         display: none;
         align-items: center;
         justify-content: center;
-
         background: rgba(21,12,45,.78);
         backdrop-filter: blur(8px);
-
         padding: 20px;
+        font-family: Arial,"Noto Sans TC",sans-serif;
       }
 
-      .ms-unlock-modal.visible {
+      .ms-unlock-modal.visible,
+      .ms-admin-modal.visible {
         display: flex;
       }
 
-      .ms-unlock-card {
+      .ms-unlock-card,
+      .ms-admin-card {
         position: relative;
         width: min(90vw,440px);
         box-sizing: border-box;
-
         padding: 30px 25px;
         border-radius: 30px;
-
-        background:
-          linear-gradient(
-            150deg,
-            #fff8e9,
-            #f6d8ff
-          );
-
+        background: linear-gradient(150deg,#fff8e9,#f6d8ff);
         border: 5px solid #ffca4b;
-
         box-shadow:
           0 0 35px rgba(255,196,65,.7),
           0 18px 50px #0007;
-
         text-align: center;
         color: #32155e;
-
-        animation:
-          msModalPop 250ms ease-out;
+        animation: msModalPop 250ms ease-out;
       }
 
       @keyframes msModalPop {
-        from {
-          opacity: 0;
-          transform: scale(.8);
-        }
-        to {
-          opacity: 1;
-          transform: scale(1);
-        }
+        from { opacity: 0; transform: scale(.8); }
+        to { opacity: 1; transform: scale(1); }
       }
 
       .ms-unlock-icon {
@@ -913,13 +717,15 @@
         margin-bottom: 8px;
       }
 
-      .ms-unlock-title {
+      .ms-unlock-title,
+      .ms-admin-title {
         font-size: clamp(22px,3vw,30px);
         font-weight: 900;
         margin-bottom: 12px;
       }
 
-      .ms-unlock-description {
+      .ms-unlock-description,
+      .ms-admin-description {
         font-size: 17px;
         font-weight: 700;
         line-height: 1.8;
@@ -928,16 +734,12 @@
       .ms-unlock-price {
         display: inline-block;
         margin: 16px auto;
-
         padding: 8px 25px;
         border-radius: 100px;
-
         color: white;
         background: #42215e;
-
         font-size: 29px;
         font-weight: 900;
-
         border: 3px solid #ffd34e;
       }
 
@@ -953,18 +755,17 @@
         justify-content: center;
       }
 
-      .ms-unlock-actions button {
-        flex: 1;
+      .ms-unlock-actions button,
+      .ms-admin-card button {
         min-height: 48px;
-
         border-radius: 18px;
         border: 0;
-
         font-size: 16px;
         font-weight: 900;
-
         cursor: pointer;
       }
+
+      .ms-unlock-actions button { flex: 1; }
 
       .ms-unlock-cancel {
         background: #ded6e7;
@@ -972,13 +773,7 @@
       }
 
       .ms-unlock-confirm {
-        background:
-          linear-gradient(
-            180deg,
-            #ffe779,
-            #ffb92c
-          );
-
+        background: linear-gradient(180deg,#ffe779,#ffb92c);
         color: #44260b;
         box-shadow: 0 4px 0 #c78513;
       }
@@ -986,6 +781,52 @@
       .ms-unlock-confirm:disabled {
         opacity: .5;
         cursor: not-allowed;
+        box-shadow: none;
+      }
+
+      /* v5：隱藏測試選單 */
+
+      .ms-admin-modal { z-index: 280; }
+
+      .ms-admin-card {
+        border-color: #b68cff;
+        background: linear-gradient(150deg,#fff8e9,#e9dcff);
+      }
+
+      .ms-admin-description {
+        margin-bottom: 20px;
+        font-size: 15px;
+      }
+
+      .ms-admin-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 11px;
+      }
+
+      .ms-admin-actions button {
+        width: 100%;
+        padding: 10px 15px;
+        background: #ffffff;
+        color: #45266c;
+        border: 2px solid #c9a6f2;
+        box-shadow: 0 3px 0 #ad8ad5;
+      }
+
+      .ms-admin-actions button:active {
+        transform: translateY(2px);
+        box-shadow: 0 1px 0 #ad8ad5;
+      }
+
+      .ms-admin-actions .ms-admin-reset-all {
+        background: #ffe5a8;
+        border-color: #e4ad4e;
+        color: #603900;
+      }
+
+      .ms-admin-actions .ms-admin-close {
+        background: #ded6e7;
+        border-color: transparent;
         box-shadow: none;
       }
 
@@ -1003,15 +844,20 @@
           animation: none;
         }
       }
-
     `;
 
     document.head.appendChild(style);
   }
 
-  // ==========================================
-  // 07. 建立首頁積木
-  // ==========================================
+  // =====================================
+  // 02. 首頁
+  // =====================================
+
+  function setChoicePosition(button, mode) {
+    const position = CONFIG[mode];
+    button.style.left = position.x * 100 + "%";
+    button.style.top = position.y * 100 + "%";
+  }
 
   function createChoice(mode, imagePath, label) {
     const button = document.createElement("button");
@@ -1019,87 +865,39 @@
     button.type = "button";
     button.className = "ms-image-choice";
     button.dataset.mode = mode;
-
-    button.setAttribute(
-      "aria-label",
-      "拖曳進入" + label
-    );
+    button.setAttribute("aria-label", "拖曳進入" + label);
 
     const img = document.createElement("img");
-
     img.src = imagePath;
     img.alt = label;
     img.draggable = false;
-
     button.appendChild(img);
 
-    button.addEventListener(
-      "pointerdown",
-      startDrag
-    );
+    button.addEventListener("pointerdown", startDrag);
+    button.addEventListener("pointermove", moveDrag);
+    button.addEventListener("pointerup", endDrag);
+    button.addEventListener("pointercancel", cancelDrag);
 
-    button.addEventListener(
-      "pointermove",
-      moveDrag
-    );
-
-    button.addEventListener(
-      "pointerup",
-      endDrag
-    );
-
-    button.addEventListener(
-      "pointercancel",
-      cancelDrag
-    );
-
-    button.addEventListener(
-      "lostpointercapture",
-      event => {
-        if (
-          dragging &&
-          event.pointerId === dragging.pointerId &&
-          !switching
-        ) {
-          restoreChoice();
-        }
+    button.addEventListener("lostpointercapture", event => {
+      if (
+        dragging &&
+        event.pointerId === dragging.pointerId &&
+        !switching
+      ) {
+        restoreChoice();
       }
-    );
+    });
 
-    button.addEventListener(
-      "keydown",
-      event => {
-        if (
-          event.key === "Enter" ||
-          event.key === " "
-        ) {
-          event.preventDefault();
-
-          if (!switching) {
-            enterMode(mode);
-          }
-        }
+    button.addEventListener("keydown", event => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        if (!switching) enterMode(mode);
       }
-    );
+    });
 
     setChoicePosition(button, mode);
-
     return button;
   }
-
-  function setChoicePosition(button, mode) {
-    const position = CONFIG[mode];
-
-    button.style.left =
-      position.x * 100 + "%";
-
-    button.style.top =
-      position.y * 100 + "%";
-  }
-
-  // ==========================================
-  // 08. 建立首頁
-  // ==========================================
 
   function createHome() {
     home = document.createElement("div");
@@ -1109,32 +907,21 @@
     stage.id = "msStage";
 
     slot = document.createElement("div");
-    slot.className = "ms-slot-hitbox";
     slot.id = "msHole";
+    slot.className = "ms-slot-hitbox";
 
     stage.appendChild(slot);
 
-    const free = createChoice(
-      "free",
-      ASSETS.free,
-      "自由創作"
+    stage.appendChild(
+      createChoice("free", ASSETS.free, "自由創作")
     );
 
-    const mystery = createChoice(
-      "mystery",
-      ASSETS.mystery,
-      "神秘題目"
+    stage.appendChild(
+      createChoice("mystery", ASSETS.mystery, "神秘題目")
     );
 
-    stage.appendChild(free);
-    stage.appendChild(mystery);
-
-    const instruction =
-      document.createElement("div");
-
-    instruction.className =
-      "ms-home-instruction";
-
+    const instruction = document.createElement("div");
+    instruction.className = "ms-home-instruction";
     instruction.textContent =
       "拖曳喜歡的積木，放進中央發光缺口！";
 
@@ -1144,14 +931,13 @@
     flash.className = "ms-home-flash";
 
     stage.appendChild(flash);
-
     home.appendChild(stage);
     document.body.appendChild(home);
   }
 
-  // ==========================================
-  // 09. 建立神秘題目頁
-  // ==========================================
+  // =====================================
+  // 03. 神秘題目選單
+  // =====================================
 
   function createMysteryPage() {
     mysteryPage = document.createElement("div");
@@ -1160,40 +946,29 @@
     mysteryStage = document.createElement("div");
     mysteryStage.id = "msMysteryStage";
 
-    // 小屋返回首頁
+    // 小屋
 
-    const backButton =
-      document.createElement("button");
-
+    const backButton = document.createElement("button");
     backButton.type = "button";
     backButton.className = "ms-mystery-home";
-
-    backButton.setAttribute(
-      "aria-label",
-      "返回首頁"
-    );
+    backButton.setAttribute("aria-label", "返回首頁");
 
     const backImage = document.createElement("img");
-
     backImage.src = ASSETS.homeButton;
     backImage.alt = "返回首頁";
 
     backButton.appendChild(backImage);
-
-    backButton.addEventListener(
-      "click",
-      showHome
-    );
+    backButton.addEventListener("click", showHome);
 
     mysteryStage.appendChild(backButton);
 
-    // 星星點數欄
+    // 星星點數欄：長按 3 秒開啟測試選單
 
     const starBar = document.createElement("div");
     starBar.className = "ms-star-bar";
+    starBar.title = "星星點數";
 
     const starImage = document.createElement("img");
-
     starImage.src = ASSETS.starBar;
     starImage.alt = "星星點數";
 
@@ -1203,23 +978,22 @@
     starBar.appendChild(starImage);
     starBar.appendChild(starNumber);
 
+    setupAdminLongPress(starBar);
+
     mysteryStage.appendChild(starBar);
 
-    // 十個關卡
+    // 關卡
 
     LEVELS.forEach(level => {
       const button = document.createElement("button");
 
       button.type = "button";
       button.className = "ms-level";
-
       button.style.left = level.x + "%";
       button.style.top = level.y + "%";
-
       button.dataset.level = level.id;
 
       const img = document.createElement("img");
-
       img.src = level.image;
       img.alt = level.name;
       img.draggable = false;
@@ -1228,56 +1002,44 @@
 
       if (level.id === "maze") {
         const seal = document.createElement("div");
-
         seal.className = "ms-maze-seal";
 
         const lock = document.createElement("div");
-
         lock.className = "ms-maze-lock";
         lock.textContent = "🔒";
 
         const cost = document.createElement("div");
-
         cost.className = "ms-maze-cost";
-        cost.textContent =
-          "⭐ " + CONFIG.mazeUnlockCost;
+        cost.textContent = "⭐ " + CONFIG.mazeUnlockCost;
 
         seal.appendChild(lock);
         seal.appendChild(cost);
-
         button.appendChild(seal);
       }
 
-      button.addEventListener(
-        "click",
-        () => selectLevel(level)
-      );
+      button.addEventListener("click", () => {
+        selectLevel(level);
+      });
 
       levelButtons.set(level.id, button);
-
       mysteryStage.appendChild(button);
     });
 
-    // 底部提示
-
     notice = document.createElement("div");
-
     notice.className = "ms-mystery-notice";
     notice.setAttribute("role", "status");
 
     mysteryStage.appendChild(notice);
-
     mysteryPage.appendChild(mysteryStage);
-
     document.body.appendChild(mysteryPage);
 
     updateAllLevelStates();
     updateStarDisplay();
   }
 
-  // ==========================================
-  // 10. 星星系統
-  // ==========================================
+  // =====================================
+  // 04. 星星點數
+  // =====================================
 
   function updateStarDisplay() {
     if (starNumber) {
@@ -1298,41 +1060,27 @@
 
   function emitStarsChange() {
     window.dispatchEvent(
-      new CustomEvent(
-        "mindspace:stars-change",
-        {
-          detail: {
-            stars: stars
-          }
-        }
-      )
+      new CustomEvent("mindspace:stars-change", {
+        detail: { stars }
+      })
     );
   }
 
   function setStars(value) {
     const number = Number(value);
 
-    if (!Number.isFinite(number)) {
+    if (!Number.isFinite(number) || unlockingMaze) {
       return stars;
     }
 
-    // 解鎖動畫中不允許其他操作改動點數
-    if (unlockingMaze) {
-      return stars;
-    }
-
-    const next = Math.max(
-      0,
-      Math.floor(number)
-    );
+    const next = Math.max(0, Math.floor(number));
 
     if (!writeStorage(STORAGE.stars, next)) {
-      showNotice("暫時無法儲存星星點數");
+      showNotice("無法儲存星星點數");
       return stars;
     }
 
     stars = next;
-
     updateStarDisplay();
     emitStarsChange();
 
@@ -1341,43 +1089,30 @@
 
   function addStars(amount) {
     const number = Number(amount);
-
-    if (!Number.isFinite(number)) {
-      return stars;
-    }
-
+    if (!Number.isFinite(number)) return stars;
     return setStars(stars + number);
   }
 
-  // ==========================================
-  // 11. 更新關卡鎖定狀態
-  // ==========================================
+  // =====================================
+  // 05. 關卡狀態
+  // =====================================
 
   function isLevelUnlocked(level) {
     if (level.id === "maze") {
       return mazeUnlocked;
     }
-
     return level.unlocked === true;
   }
 
   function updateAllLevelStates() {
     LEVELS.forEach(level => {
       const button = levelButtons.get(level.id);
-
       if (!button) return;
 
       const unlocked = isLevelUnlocked(level);
 
-      button.classList.toggle(
-        "unlocked",
-        unlocked
-      );
-
-      button.classList.toggle(
-        "locked",
-        !unlocked
-      );
+      button.classList.toggle("unlocked", unlocked);
+      button.classList.toggle("locked", !unlocked);
 
       button.setAttribute(
         "aria-label",
@@ -1401,44 +1136,28 @@
     });
   }
 
-  // ==========================================
-  // 12. 提示訊息
-  // ==========================================
-
   function showNotice(message) {
     if (!notice) return;
 
     notice.textContent = message;
     notice.classList.add("visible");
 
-    if (noticeTimer) {
-      clearTimeout(noticeTimer);
-    }
+    clearTimeout(noticeTimer);
 
     noticeTimer = setTimeout(() => {
       notice.classList.remove("visible");
     }, 2800);
   }
 
-  // ==========================================
-  // 13. 建立解鎖確認視窗
-  // ==========================================
+  // =====================================
+  // 06. 解鎖確認視窗
+  // =====================================
 
   function createUnlockModal() {
     unlockModal = document.createElement("div");
-
     unlockModal.className = "ms-unlock-modal";
-
-    unlockModal.setAttribute(
-      "role",
-      "dialog"
-    );
-
-    unlockModal.setAttribute(
-      "aria-modal",
-      "true"
-    );
-
+    unlockModal.setAttribute("role", "dialog");
+    unlockModal.setAttribute("aria-modal", "true");
     unlockModal.setAttribute(
       "aria-label",
       "解鎖小小迷宮設計師"
@@ -1455,54 +1174,33 @@
     title.className = "ms-unlock-title";
     title.textContent = "小小迷宮設計師";
 
-    const description =
-      document.createElement("div");
-
-    description.className =
-      "ms-unlock-description";
-
+    const description = document.createElement("div");
+    description.className = "ms-unlock-description";
     description.textContent =
       "想要打開這個神秘關卡嗎？";
 
     const price = document.createElement("div");
-
     price.className = "ms-unlock-price";
+    price.textContent = "⭐ " + CONFIG.mazeUnlockCost;
 
-    price.textContent =
-      "⭐ " + CONFIG.mazeUnlockCost;
+    unlockBalance = document.createElement("div");
+    unlockBalance.className = "ms-unlock-balance";
 
-    unlockBalance =
-      document.createElement("div");
-
-    unlockBalance.className =
-      "ms-unlock-balance";
-
-    const actions =
-      document.createElement("div");
-
+    const actions = document.createElement("div");
     actions.className = "ms-unlock-actions";
 
     const cancel = document.createElement("button");
-
     cancel.type = "button";
     cancel.className = "ms-unlock-cancel";
     cancel.textContent = "再想想";
-
-    cancel.addEventListener(
-      "click",
-      closeUnlockModal
-    );
+    cancel.addEventListener("click", closeUnlockModal);
 
     unlockConfirmButton =
       document.createElement("button");
 
     unlockConfirmButton.type = "button";
-
-    unlockConfirmButton.className =
-      "ms-unlock-confirm";
-
-    unlockConfirmButton.textContent =
-      "解鎖！";
+    unlockConfirmButton.className = "ms-unlock-confirm";
+    unlockConfirmButton.textContent = "解鎖！";
 
     unlockConfirmButton.addEventListener(
       "click",
@@ -1521,116 +1219,64 @@
 
     unlockModal.appendChild(card);
 
-    unlockModal.addEventListener(
-      "click",
-      event => {
-        if (event.target === unlockModal) {
-          closeUnlockModal();
-        }
+    unlockModal.addEventListener("click", event => {
+      if (event.target === unlockModal) {
+        closeUnlockModal();
       }
-    );
-
-    document.addEventListener(
-      "keydown",
-      event => {
-        if (
-          event.key === "Escape" &&
-          unlockModal.classList.contains("visible")
-        ) {
-          closeUnlockModal();
-        }
-      }
-    );
+    });
 
     document.body.appendChild(unlockModal);
   }
 
   function openUnlockModal() {
-    if (mazeUnlocked || unlockingMaze) {
-      return;
-    }
+    if (mazeUnlocked || unlockingMaze) return;
 
     updateStarDisplay();
-
     unlockModal.classList.add("visible");
-
     unlockConfirmButton.focus();
   }
 
   function closeUnlockModal() {
     if (unlockingMaze) return;
-
     unlockModal.classList.remove("visible");
   }
 
-  // ==========================================
-  // 14. 確認扣點與永久解鎖
-  // ==========================================
+  // =====================================
+  // 07. 扣除星星並解鎖
+  // =====================================
 
   function confirmMazeUnlock() {
-    if (mazeUnlocked || unlockingMaze) {
-      return;
-    }
+    if (mazeUnlocked || unlockingMaze) return;
 
     const cost = CONFIG.mazeUnlockCost;
 
     if (stars < cost) {
       closeUnlockModal();
-
       showNotice(
-        "⭐ 還差 " +
-        (cost - stars) +
-        " 顆星星才能解鎖！"
+        "⭐ 還差 " + (cost - stars) + " 顆星星！"
       );
-
       return;
     }
 
     unlockingMaze = true;
     unlockConfirmButton.disabled = true;
 
-    const oldStars = stars;
-    const nextStars = oldStars - cost;
+    const nextStars = stars - cost;
 
-    /*
-     * 先儲存解鎖狀態，
-     * 再儲存扣除後的點數。
-     *
-     * 若點數儲存失敗，
-     * 嘗試回復原本的鎖定狀態。
-     */
-
-    const savedUnlock =
-      writeStorage(STORAGE.maze, "true");
-
-    if (!savedUnlock) {
+    if (!writeStorage(STORAGE.maze, "true")) {
       unlockingMaze = false;
       updateStarDisplay();
-
-      showNotice(
-        "無法儲存解鎖狀態，請稍後再試"
-      );
-
+      showNotice("無法儲存解鎖狀態");
       return;
     }
 
-    const savedStars =
-      writeStorage(STORAGE.stars, nextStars);
-
-    if (!savedStars) {
+    if (!writeStorage(STORAGE.stars, nextStars)) {
       writeStorage(STORAGE.maze, "false");
-
       unlockingMaze = false;
       updateStarDisplay();
-
-      showNotice(
-        "無法儲存星星點數，請稍後再試"
-      );
-
+      showNotice("無法儲存星星點數");
       return;
     }
-
-    // 儲存成功後才更新畫面
 
     stars = nextStars;
     mazeUnlocked = true;
@@ -1641,27 +1287,22 @@
     unlockModal.classList.remove("visible");
 
     window.dispatchEvent(
-      new CustomEvent(
-        "mindspace:level-unlocked",
-        {
-          detail: {
-            id: "maze",
-            name: "小小迷宮設計師",
-            cost: cost,
-            stars: stars
-          }
+      new CustomEvent("mindspace:level-unlocked", {
+        detail: {
+          id: "maze",
+          name: "小小迷宮設計師",
+          cost,
+          stars
         }
-      )
+      })
     );
-
-    // 播放碎裂特效
 
     playMazeUnlockAnimation();
   }
 
-  // ==========================================
-  // 15. 碎裂特效
-  // ==========================================
+  // =====================================
+  // 08. 碎裂特效
+  // =====================================
 
   function playMazeUnlockAnimation() {
     const button = levelButtons.get("maze");
@@ -1682,101 +1323,62 @@
       ).matches;
 
     if (reduceMotion) {
-      updateAllLevelStates();
       unlockingMaze = false;
+      updateAllLevelStates();
       showNotice("🎉 小小迷宮設計師解鎖成功！");
       return;
     }
 
-    // 第一階段：鎖頭震動
-
     button.classList.add("ms-maze-shaking");
-
     showNotice("🔓 正在打開神秘封印……");
 
     setTimeout(() => {
-      if (seal) {
-        seal.classList.add("breaking");
-      }
-
+      if (seal) seal.classList.add("breaking");
       createUnlockBurst(button);
       createUnlockParticles(button);
-
     }, 450);
 
-    // 第二階段：封印消失，露出積木
-
     setTimeout(() => {
-      button.classList.remove(
-        "ms-maze-shaking"
-      );
-
+      button.classList.remove("ms-maze-shaking");
       updateAllLevelStates();
-
       button.classList.add("maze-revealed");
 
       showNotice(
         "🎉 解鎖成功！小小迷宮設計師開放了！"
       );
-
     }, 1000);
-
-    // 第三階段：動畫結束
 
     setTimeout(() => {
       button.classList.remove("maze-revealed");
-
-      if (seal) {
-        seal.classList.remove("breaking");
-      }
-
+      if (seal) seal.classList.remove("breaking");
       unlockingMaze = false;
-
       updateStarDisplay();
-
     }, 1600);
   }
 
-  // ==========================================
-  // 16. 中央金色爆光
-  // ==========================================
-
   function createUnlockBurst(button) {
     const rect = button.getBoundingClientRect();
-
-    const centerX = rect.left + rect.width / 2;
-    const centerY = rect.top + rect.height / 2;
-
     const burst = document.createElement("div");
 
     burst.className = "ms-unlock-burst";
-
-    burst.style.left = centerX + "px";
-    burst.style.top = centerY + "px";
+    burst.style.left =
+      rect.left + rect.width / 2 + "px";
+    burst.style.top =
+      rect.top + rect.height / 2 + "px";
 
     document.body.appendChild(burst);
 
-    setTimeout(() => {
-      burst.remove();
-    }, 750);
+    setTimeout(() => burst.remove(), 750);
   }
-
-  // ==========================================
-  // 17. 積木碎片與星星
-  // ==========================================
 
   function createUnlockParticles(button) {
     const rect = button.getBoundingClientRect();
-
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
-
     const count = 38;
 
     for (let i = 0; i < count; i++) {
-      const particle =
-        document.createElement("div");
-
+      const particle = document.createElement("div");
       const isStar = i % 3 === 0;
 
       particle.className =
@@ -1789,17 +1391,14 @@
       }
 
       const angle =
-        (Math.PI * 2 * i / count) +
+        Math.PI * 2 * i / count +
         (Math.random() - .5) * .4;
 
       const distance =
         60 + Math.random() * 190;
 
-      const dx =
-        Math.cos(angle) * distance;
-
-      const dy =
-        Math.sin(angle) * distance;
+      const dx = Math.cos(angle) * distance;
+      const dy = Math.sin(angle) * distance;
 
       const rotation =
         -360 + Math.random() * 720;
@@ -1807,24 +1406,13 @@
       const duration =
         650 + Math.random() * 500;
 
-      const size =
-        9 + Math.random() * 18;
+      const size = 9 + Math.random() * 18;
 
-      particle.style.left =
-        centerX + "px";
+      particle.style.left = centerX + "px";
+      particle.style.top = centerY + "px";
 
-      particle.style.top =
-        centerY + "px";
-
-      particle.style.setProperty(
-        "--dx",
-        dx + "px"
-      );
-
-      particle.style.setProperty(
-        "--dy",
-        dy + "px"
-      );
+      particle.style.setProperty("--dx", dx + "px");
+      particle.style.setProperty("--dy", dy + "px");
 
       particle.style.setProperty(
         "--rotate",
@@ -1843,15 +1431,300 @@
 
       document.body.appendChild(particle);
 
-      setTimeout(() => {
-        particle.remove();
-      }, duration + 100);
+      setTimeout(
+        () => particle.remove(),
+        duration + 100
+      );
     }
   }
 
-  // ==========================================
-  // 18. 關卡選擇
-  // ==========================================
+  // =====================================
+  // 09. v5：長按星星欄 3 秒
+  // =====================================
+
+  function clearAdminHold() {
+    if (adminHoldTimer !== null) {
+      clearTimeout(adminHoldTimer);
+      adminHoldTimer = null;
+    }
+    adminPointerId = null;
+  }
+
+  function setupAdminLongPress(element) {
+    element.addEventListener("pointerdown", event => {
+      if (unlockingMaze || adminPointerId !== null) {
+        return;
+      }
+
+      if (
+        event.pointerType === "mouse" &&
+        event.button !== 0
+      ) {
+        return;
+      }
+
+      clearAdminHold();
+
+      adminPointerId = event.pointerId;
+      adminStartX = event.clientX;
+      adminStartY = event.clientY;
+
+      adminHoldTimer = setTimeout(() => {
+        adminHoldTimer = null;
+        adminPointerId = null;
+
+        openAdminModal();
+      }, CONFIG.adminHoldMs);
+
+      event.preventDefault();
+    });
+
+    element.addEventListener("pointermove", event => {
+      if (event.pointerId !== adminPointerId) return;
+
+      const dx = event.clientX - adminStartX;
+      const dy = event.clientY - adminStartY;
+
+      // 手指滑動超過 15px，就取消長按
+      if (Math.hypot(dx, dy) > 15) {
+        clearAdminHold();
+      }
+    });
+
+    element.addEventListener("pointerup", clearAdminHold);
+    element.addEventListener("pointercancel", clearAdminHold);
+    element.addEventListener("pointerleave", clearAdminHold);
+
+    element.addEventListener("contextmenu", event => {
+      event.preventDefault();
+    });
+
+    // 避免瀏覽器切換分頁後仍觸發
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) clearAdminHold();
+    });
+  }
+
+  // =====================================
+  // 10. v5：建立隱藏測試選單
+  // =====================================
+
+  function createAdminModal() {
+    adminModal = document.createElement("div");
+    adminModal.className = "ms-admin-modal";
+
+    adminModal.setAttribute("role", "dialog");
+    adminModal.setAttribute("aria-modal", "true");
+    adminModal.setAttribute(
+      "aria-label",
+      "Mindspace 測試重置選單"
+    );
+
+    const card = document.createElement("div");
+    card.className = "ms-admin-card";
+
+    const title = document.createElement("div");
+    title.className = "ms-admin-title";
+    title.textContent = "🛠️ 測試重置選單";
+
+    const description = document.createElement("div");
+    description.className = "ms-admin-description";
+    description.textContent =
+      "此功能僅供開發與展示測試使用。";
+
+    const actions = document.createElement("div");
+    actions.className = "ms-admin-actions";
+
+    function makeButton(text, className, callback) {
+      const button = document.createElement("button");
+
+      button.type = "button";
+      button.className = className;
+      button.textContent = text;
+      button.addEventListener("click", callback);
+
+      actions.appendChild(button);
+      return button;
+    }
+
+    makeButton(
+      "🔒 重新上鎖（保留星星）",
+      "ms-admin-reset-lock",
+      resetMazeLock
+    );
+
+    makeButton(
+      "⭐ 恢復 24 顆星星",
+      "ms-admin-reset-stars",
+      resetStarsOnly
+    );
+
+    makeButton(
+      "🔄 全部重置",
+      "ms-admin-reset-all",
+      resetAllTestData
+    );
+
+    makeButton(
+      "取消",
+      "ms-admin-close",
+      closeAdminModal
+    );
+
+    card.appendChild(title);
+    card.appendChild(description);
+    card.appendChild(actions);
+
+    adminModal.appendChild(card);
+
+    adminModal.addEventListener("click", event => {
+      if (event.target === adminModal) {
+        closeAdminModal();
+      }
+    });
+
+    document.body.appendChild(adminModal);
+  }
+
+  function openAdminModal() {
+    if (unlockingMaze || currentMode !== "mystery") {
+      return;
+    }
+
+    if (unlockModal.classList.contains("visible")) {
+      return;
+    }
+
+    adminModal.classList.add("visible");
+
+    const firstButton =
+      adminModal.querySelector("button");
+
+    if (firstButton) firstButton.focus();
+  }
+
+  function closeAdminModal() {
+    if (!adminModal) return;
+    adminModal.classList.remove("visible");
+  }
+
+  // =====================================
+  // 11. v5：重新上鎖
+  // =====================================
+
+  function resetMazeLock() {
+    if (unlockingMaze) return;
+
+    const success =
+      writeStorage(STORAGE.maze, "false");
+
+    if (!success) {
+      showNotice("無法儲存重置狀態");
+      return;
+    }
+
+    mazeUnlocked = false;
+    updateAllLevelStates();
+    closeAdminModal();
+
+    showNotice(
+      "🔒 小小迷宮設計師已重新上鎖！"
+    );
+
+    window.dispatchEvent(
+      new CustomEvent("mindspace:level-reset", {
+        detail: {
+          id: "maze",
+          unlocked: false
+        }
+      })
+    );
+  }
+
+  // =====================================
+  // 12. v5：重設星星
+  // =====================================
+
+  function resetStarsOnly() {
+    if (unlockingMaze) return;
+
+    if (!writeStorage(
+      STORAGE.stars,
+      CONFIG.initialStars
+    )) {
+      showNotice("無法儲存重置點數");
+      return;
+    }
+
+    stars = CONFIG.initialStars;
+    updateStarDisplay();
+    emitStarsChange();
+
+    closeAdminModal();
+
+    showNotice("⭐ 星星已恢復為 24 顆！");
+  }
+
+  // =====================================
+  // 13. v5：全部重置
+  // =====================================
+
+  function resetAllTestData() {
+    if (unlockingMaze) return;
+
+    const oldStars = stars;
+    const oldMazeUnlocked = mazeUnlocked;
+
+    // 先寫入星星
+    if (!writeStorage(
+      STORAGE.stars,
+      CONFIG.initialStars
+    )) {
+      showNotice("重置失敗，請稍後再試");
+      return;
+    }
+
+    // 再寫入鎖定狀態
+    if (!writeStorage(STORAGE.maze, "false")) {
+      // 嘗試還原星星
+      writeStorage(STORAGE.stars, oldStars);
+
+      stars = oldStars;
+      mazeUnlocked = oldMazeUnlocked;
+
+      updateStarDisplay();
+      updateAllLevelStates();
+
+      showNotice("重置失敗，請稍後再試");
+      return;
+    }
+
+    stars = CONFIG.initialStars;
+    mazeUnlocked = false;
+
+    updateStarDisplay();
+    updateAllLevelStates();
+    emitStarsChange();
+
+    closeAdminModal();
+
+    showNotice(
+      "🔄 已恢復 24 顆星星，迷宮重新上鎖！"
+    );
+
+    window.dispatchEvent(
+      new CustomEvent("mindspace:level-reset", {
+        detail: {
+          id: "maze",
+          unlocked: false
+        }
+      })
+    );
+  }
+
+  // =====================================
+  // 14. 選擇關卡
+  // =====================================
 
   function selectLevel(level) {
     if (unlockingMaze) return;
@@ -1863,27 +1736,21 @@
 
     if (!isLevelUnlocked(level)) {
       showNotice(
-        "🔒 " +
-        level.name +
-        " 尚未解鎖！"
+        "🔒 " + level.name + " 尚未解鎖！"
       );
-
       return;
     }
 
     selectedTheme = level.id;
 
     window.dispatchEvent(
-      new CustomEvent(
-        "mindspace:theme-selected",
-        {
-          detail: {
-            id: level.id,
-            name: level.name,
-            theme: level.id
-          }
+      new CustomEvent("mindspace:theme-selected", {
+        detail: {
+          id: level.id,
+          name: level.name,
+          theme: level.id
         }
-      )
+      })
     );
 
     console.info(
@@ -1891,13 +1758,12 @@
       level.name
     );
 
-    // 保留原本的進入創作世界方式
     enterMode("free", level.id);
   }
 
-  // ==========================================
-  // 19. 座標換算
-  // ==========================================
+  // =====================================
+  // 15. 首頁拖曳座標
+  // =====================================
 
   function getStageRect() {
     return stage.getBoundingClientRect();
@@ -1907,25 +1773,15 @@
     const rect = getStageRect();
 
     return {
-      x:
-        rect.left +
-        rect.width * CONFIG.slot.x,
-
-      y:
-        rect.top +
-        rect.height * CONFIG.slot.y,
-
-      radiusX:
-        rect.width * CONFIG.slot.radiusX,
-
-      radiusY:
-        rect.height * CONFIG.slot.radiusY
+      x: rect.left + rect.width * CONFIG.slot.x,
+      y: rect.top + rect.height * CONFIG.slot.y,
+      radiusX: rect.width * CONFIG.slot.radiusX,
+      radiusY: rect.height * CONFIG.slot.radiusY
     };
   }
 
   function getElementCenter(element) {
-    const rect =
-      element.getBoundingClientRect();
+    const rect = element.getBoundingClientRect();
 
     return {
       x: rect.left + rect.width / 2,
@@ -1936,18 +1792,11 @@
   function isInsideSlot(x, y) {
     const center = getSlotCenter();
 
-    const dx =
-      (x - center.x) / center.radiusX;
-
-    const dy =
-      (y - center.y) / center.radiusY;
+    const dx = (x - center.x) / center.radiusX;
+    const dy = (y - center.y) / center.radiusY;
 
     return dx * dx + dy * dy <= 1;
   }
-
-  // ==========================================
-  // 20. 開始拖曳
-  // ==========================================
 
   function startDrag(event) {
     if (switching || dragging) return;
@@ -1960,73 +1809,47 @@
     }
 
     const element = event.currentTarget;
-
     const stageRect = getStageRect();
     const rect = element.getBoundingClientRect();
 
     dragging = {
-      element: element,
+      element,
       pointerId: event.pointerId,
-
       startPointerX: event.clientX,
       startPointerY: event.clientY,
-
       startCenterX:
-        rect.left +
-        rect.width / 2 -
-        stageRect.left,
-
+        rect.left + rect.width / 2 - stageRect.left,
       startCenterY:
-        rect.top +
-        rect.height / 2 -
-        stageRect.top
+        rect.top + rect.height / 2 - stageRect.top
     };
 
     element.classList.remove("snapping");
     element.classList.add("dragging");
-
     element.setPointerCapture(event.pointerId);
 
     event.preventDefault();
   }
 
-  // ==========================================
-  // 21. 拖曳移動
-  // ==========================================
-
   function moveDrag(event) {
     if (!dragging) return;
-
-    if (
-      event.pointerId !== dragging.pointerId
-    ) {
-      return;
-    }
+    if (event.pointerId !== dragging.pointerId) return;
 
     const d = dragging;
 
-    const deltaX =
-      event.clientX - d.startPointerX;
-
-    const deltaY =
-      event.clientY - d.startPointerY;
-
+    const deltaX = event.clientX - d.startPointerX;
+    const deltaY = event.clientY - d.startPointerY;
     const stageRect = getStageRect();
 
-    const newX =
-      d.startCenterX + deltaX;
-
-    const newY =
-      d.startCenterY + deltaY;
+    const newX = d.startCenterX + deltaX;
+    const newY = d.startCenterY + deltaY;
 
     d.element.style.left =
-      (newX / stageRect.width * 100) + "%";
+      newX / stageRect.width * 100 + "%";
 
     d.element.style.top =
-      (newY / stageRect.height * 100) + "%";
+      newY / stageRect.height * 100 + "%";
 
-    const center =
-      getElementCenter(d.element);
+    const center = getElementCenter(d.element);
 
     slot.classList.toggle(
       "ms-near",
@@ -2034,26 +1857,17 @@
     );
   }
 
-  // ==========================================
-  // 22. 還原積木
-  // ==========================================
-
   function restoreChoice() {
     if (!dragging) return;
 
     const element = dragging.element;
     const mode = element.dataset.mode;
 
-    element.classList.remove(
-      "dragging",
-      "snapping"
-    );
-
+    element.classList.remove("dragging", "snapping");
     element.style.transform = "";
     element.style.transition = "";
 
     setChoicePosition(element, mode);
-
     slot.classList.remove("ms-near");
 
     dragging = null;
@@ -2061,36 +1875,19 @@
 
   function cancelDrag(event) {
     if (!dragging) return;
-
-    if (
-      event.pointerId !== dragging.pointerId
-    ) {
-      return;
-    }
-
+    if (event.pointerId !== dragging.pointerId) return;
     restoreChoice();
   }
 
-  // ==========================================
-  // 23. 放開積木
-  // ==========================================
-
   function endDrag(event) {
     if (!dragging) return;
-
-    if (
-      event.pointerId !== dragging.pointerId
-    ) {
-      return;
-    }
+    if (event.pointerId !== dragging.pointerId) return;
 
     moveDrag(event);
 
     const element = dragging.element;
     const mode = element.dataset.mode;
-
-    const center =
-      getElementCenter(element);
+    const center = getElementCenter(element);
 
     if (!isInsideSlot(center.x, center.y)) {
       restoreChoice();
@@ -2102,12 +1899,8 @@
     element.classList.remove("dragging");
     element.classList.add("snapping");
 
-    element.style.left =
-      CONFIG.slot.x * 100 + "%";
-
-    element.style.top =
-      CONFIG.slot.y * 100 + "%";
-
+    element.style.left = CONFIG.slot.x * 100 + "%";
+    element.style.top = CONFIG.slot.y * 100 + "%";
     element.style.transform =
       "translate(-50%, -50%) scale(.95)";
 
@@ -2119,30 +1912,24 @@
 
     window.setTimeout(() => {
       restoreChoice();
-
       flash.classList.remove("active");
-
       switching = false;
-
       enterMode(mode);
     }, CONFIG.enterDelay);
   }
 
-  // ==========================================
-  // 24. 模式切換
-  // ==========================================
+  // =====================================
+  // 16. 模式切換
+  // =====================================
 
   function enterMode(mode, theme) {
-    if (
-      mode !== "free" &&
-      mode !== "mystery"
-    ) {
+    if (mode !== "free" && mode !== "mystery") {
       return;
     }
 
-    if (dragging) {
-      restoreChoice();
-    }
+    if (dragging) restoreChoice();
+
+    closeAdminModal();
 
     if (mode === "mystery") {
       selectedTheme = null;
@@ -2153,59 +1940,44 @@
     }
 
     home.classList.add("ms-hidden");
-
     mysteryPage.classList.remove("active");
 
     currentMode = mode;
 
     if (mode === "free") {
-      // 保留既有 p5.js 世界
-      // 不清空角色與環境
-
-      window.dispatchEvent(
-        new Event("resize")
-      );
+      window.dispatchEvent(new Event("resize"));
     }
 
     if (mode === "mystery") {
       updateAllLevelStates();
       updateStarDisplay();
-
       mysteryPage.classList.add("active");
     }
 
     window.dispatchEvent(
-      new CustomEvent(
-        "mindspace:mode-change",
-        {
-          detail: {
-            mode: currentMode,
-            theme: selectedTheme
-          }
+      new CustomEvent("mindspace:mode-change", {
+        detail: {
+          mode: currentMode,
+          theme: selectedTheme
         }
-      )
+      })
     );
   }
-
-  // ==========================================
-  // 25. 返回首頁
-  // ==========================================
 
   function showHome() {
     if (unlockingMaze) return;
 
-    if (dragging) {
-      restoreChoice();
-    }
+    if (dragging) restoreChoice();
 
     closeUnlockModal();
+    closeAdminModal();
+    clearAdminHold();
 
     switching = false;
     currentMode = "home";
     selectedTheme = null;
 
     mysteryPage.classList.remove("active");
-
     home.classList.remove("ms-hidden");
 
     flash.classList.remove("active");
@@ -2214,11 +1986,7 @@
     document.querySelectorAll(
       ".ms-image-choice"
     ).forEach(element => {
-      element.classList.remove(
-        "dragging",
-        "snapping"
-      );
-
+      element.classList.remove("dragging", "snapping");
       element.style.transform = "";
       element.style.transition = "";
 
@@ -2229,82 +1997,83 @@
     });
 
     window.dispatchEvent(
-      new CustomEvent(
-        "mindspace:mode-change",
-        {
-          detail: {
-            mode: "home",
-            theme: null
-          }
+      new CustomEvent("mindspace:mode-change", {
+        detail: {
+          mode: "home",
+          theme: null
         }
-      )
+      })
     );
   }
 
-  // ==========================================
-  // 26. 初始化
-  // ==========================================
+  // =====================================
+  // 17. 初始化
+  // =====================================
 
   function initialize() {
-    if (
-      document.getElementById("msHome")
-    ) {
-      return;
-    }
+    if (document.getElementById("msHome")) return;
 
     createStyles();
     createHome();
     createMysteryPage();
     createUnlockModal();
+    createAdminModal();
 
     updateStarDisplay();
     updateAllLevelStates();
 
+    document.addEventListener("keydown", event => {
+      if (event.key !== "Escape") return;
+
+      if (
+        adminModal &&
+        adminModal.classList.contains("visible")
+      ) {
+        closeAdminModal();
+      } else if (
+        unlockModal &&
+        unlockModal.classList.contains("visible")
+      ) {
+        closeUnlockModal();
+      }
+    });
+
     console.info(
-      "[Mindspace Home] v4 星星解鎖系統已載入",
+      "[Mindspace Home] v5 已載入",
       {
-        stars: stars,
-        mazeUnlocked: mazeUnlocked,
-        mazeCost: CONFIG.mazeUnlockCost
+        stars,
+        mazeUnlocked,
+        mazeCost: CONFIG.mazeUnlockCost,
+        adminHoldMs: CONFIG.adminHoldMs
       }
     );
   }
 
-  // ==========================================
-  // 27. 對外控制介面
-  // ==========================================
+  // =====================================
+  // 18. 對外 API
+  // =====================================
 
   window.MindspaceHome = {
     show: showHome,
-
-    enterMode: enterMode,
-
+    enterMode,
     getMode: () => currentMode,
+    getSelectedTheme: () => selectedTheme,
 
-    getSelectedTheme:
-      () => selectedTheme,
-
-    getLevels:
-      () => LEVELS.map(level => ({
-        id: level.id,
-        name: level.name,
-        unlocked: isLevelUnlocked(level),
-        unlockCost: level.unlockCost || null
-      })),
+    getLevels: () => LEVELS.map(level => ({
+      id: level.id,
+      name: level.name,
+      unlocked: isLevelUnlocked(level),
+      unlockCost: level.unlockCost || null
+    })),
 
     getStars: () => stars,
+    setStars,
+    addStars,
 
-    setStars: setStars,
-
-    addStars: addStars,
-
-    isMazeUnlocked:
-      () => mazeUnlocked
+    isMazeUnlocked: () => mazeUnlocked
   };
 
-  if (
-    document.readyState === "loading"
-  ) {
+  if (document.readyState === "loading") {
     document.addEventListener(
       "DOMContentLoaded",
       initialize,
@@ -2313,5 +2082,4 @@
   } else {
     initialize();
   }
-
 })();

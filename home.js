@@ -114,10 +114,10 @@
         display: none;
       }
 
-      #msStage {
-        position: relative;
-        width: min(100vw, 177.47dvh);
-        aspect-ratio: 1670 / 941;
+    #msStage {
+  position: relative;
+  width: 100vw;
+  height: 100dvh;
         flex-shrink: 0;
         overflow: hidden;
         background-image:

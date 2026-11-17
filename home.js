@@ -2,48 +2,109 @@
 "use strict";
 
 /*
- * Mindspace Plus-Plus｜拖曳積木首頁 v1
+ * Mindspace Plus-Plus
+ * 圖片版拖曳首頁 v2
  *
- * 不修改原本的：
- * - OpenAI / GAS Bridge
- * - 兩種去背模式
- * - 拍照與手動修整
- * - p5.js 世界與角色
- * - 語音魔法與 AI 變身
+ * 只負責：
+ * 1. 顯示自訂背景圖片
+ * 2. 黃色、紫色 PNG 自由拖曳
+ * 3. 中央插槽位置判定
+ * 4. 磁吸動畫
+ * 5. 切換自由創作／神祕題目
  *
- * 本階段：
- * 1. Plus-Plus 積木牆
- * 2. 中央發光缺口
- * 3. 黃色、紫色積木拖曳
- * 4. 吸附動畫
- * 5. 模式切換
+ * 不修改：
+ * OpenAI、GAS Bridge、拍照、去背、
+ * 手動修整、p5.js 世界、語音互動
  */
 
 (function () {
   if (window.MindspaceHome) return;
 
-  const COLORS = [
-    "#ffca20", "#ffda42", "#276cdd",
-    "#a251df", "#f25d73", "#40bb80",
-    "#ffffff", "#f59a3e", "#f17ac5",
-    "#43b8e8", "#8dd34d"
-  ];
+  // ================================
+  // 01. 圖片路徑
+  // ================================
+
+  const ASSETS = {
+    background: "./assets/home-background.png",
+    free: "./assets/free-block.png",
+    mystery: "./assets/mystery-block.png"
+  };
+
+  // 背景圖片原始尺寸
+  const BG_WIDTH = 1670;
+  const BG_HEIGHT = 941;
+
+  // ================================
+  // 02. 座標設定
+  // 全部採用背景比例座標 0～1
+  // ================================
+
+  const CONFIG = {
+    // 背景中央發光插槽
+    slot: {
+      x: 0.50,
+      y: 0.395,
+
+      // 放置成功判定範圍
+      radiusX: 0.115,
+      radiusY: 0.17
+    },
+
+    // 黃色積木初始位置
+    free: {
+      x: 0.30,
+      y: 0.79
+    },
+
+    // 紫色積木初始位置
+    mystery: {
+      x: 0.70,
+      y: 0.79
+    },
+
+    // 積木顯示寬度占背景的比例
+    blockWidth: 0.255,
+
+    // 積木可活動的高度
+    blockHeight: 0.34,
+
+    // 磁吸時間
+    snapDuration: 350,
+
+    // 切換延遲
+    enterDelay: 780
+  };
 
   let currentMode = "home";
   let dragging = null;
   let switching = false;
 
+  let home = null;
+  let stage = null;
+  let slot = null;
+  let flash = null;
+  let mysteryPage = null;
+
+  // ================================
+  // 03. CSS
+  // ================================
+
   function createStyles() {
     const style = document.createElement("style");
+
+    style.id = "msImageHomeStyles";
 
     style.textContent = `
       #msHome {
         position: fixed;
         inset: 0;
         z-index: 200;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         overflow: hidden;
+        background: #251b42;
         font-family: Arial, "Noto Sans TC", sans-serif;
-        background: #f5d6c2;
         user-select: none;
         -webkit-user-select: none;
         touch-action: none;
@@ -53,240 +114,117 @@
         display: none;
       }
 
-      .ms-wall {
-        position: absolute;
-        inset: -3%;
-        display: grid;
-        grid-template-columns: repeat(13, 1fr);
-        grid-template-rows: repeat(9, 1fr);
-        background:
-          radial-gradient(
-            ellipse at 50% 40%,
-            #fff3d9 0%,
-            #ecc4b0 55%,
-            #dba9a1 100%
-          );
-        filter: saturate(1.12);
-        overflow: hidden;
-      }
-
-      .ms-wall-piece {
-        width: 112%;
-        height: 112%;
+      #msStage {
         position: relative;
-        clip-path: polygon(
-          34% 0%, 66% 0%,
-          66% 34%, 100% 34%,
-          100% 66%, 66% 66%,
-          66% 100%, 34% 100%,
-          34% 66%, 0% 66%,
-          0% 34%, 34% 34%
-        );
-        background:
-          linear-gradient(
-            145deg,
-            #ffffff55 0%,
-            transparent 35%,
-            #00000025 100%
-          ),
-          var(--piece-color);
-        box-shadow: inset -5px -5px 8px #0002;
-        transform: rotate(var(--piece-angle));
-      }
-
-      .ms-wall::after {
-        content: "";
-        position: absolute;
-        inset: 0;
-        pointer-events: none;
-        background:
-          radial-gradient(
-            ellipse at center,
-            #fff4e200 20%,
-            #6e42602a 100%
-          );
-      }
-
-      .ms-hole {
-        position: absolute;
-        width: clamp(130px, 19vw, 260px);
-        aspect-ratio: 1;
-        top: 35%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        clip-path: polygon(
-          34% 0%, 66% 0%,
-          66% 34%, 100% 34%,
-          100% 66%, 66% 66%,
-          66% 100%, 34% 100%,
-          34% 66%, 0% 66%,
-          0% 34%, 34% 34%
-        );
-        background: #fff4e2;
-        filter: drop-shadow(0 0 22px #ffd25d);
-        z-index: 3;
-      }
-
-      .ms-hole-inner {
-        position: absolute;
-        inset: 6px;
-        clip-path: inherit;
-        background:
-          radial-gradient(
-            circle,
-            #fffdf3 0%,
-            #ffdda2 70%,
-            #ffbd48 100%
-          );
-        animation: msGlow 2s ease-in-out infinite;
-      }
-
-      @keyframes msGlow {
-        0%, 100% { opacity: .8; }
-        50% { opacity: 1; }
-      }
-
-      .ms-hole.ms-near {
-        filter: drop-shadow(0 0 40px #ffffff);
-        transform:
-          translate(-50%, -50%)
-          scale(1.08);
-      }
-
-      .ms-instruction {
-        position: absolute;
-        z-index: 5;
-        top: 56%;
-        left: 50%;
-        transform: translateX(-50%);
-        white-space: nowrap;
-        padding: 11px 22px;
-        border-radius: 40px;
-        background: #ffffffdf;
-        color: #613b83;
-        font-size: clamp(13px, 1.6vw, 20px);
-        font-weight: 800;
-        box-shadow: 0 6px 24px #51345b26;
-      }
-
-      .ms-choices {
-        position: absolute;
-        z-index: 10;
-        bottom: 5%;
-        left: 50%;
-        transform: translateX(-50%);
-        width: min(690px, 94vw);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: clamp(14px, 4vw, 65px);
-      }
-
-      .ms-choice {
-        position: relative;
-        width: clamp(145px, 21vw, 270px);
-        aspect-ratio: 1.08;
+        width: min(100vw, 177.47dvh);
+        aspect-ratio: 1670 / 941;
         flex-shrink: 0;
+        overflow: hidden;
+        background-image:
+          url("./assets/home-background.png");
+        background-size: 100% 100%;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
+
+      .ms-slot-hitbox {
+        position: absolute;
+        left: 50%;
+        top: 39.5%;
+        width: 23%;
+        height: 34%;
+        transform: translate(-50%, -50%);
+        pointer-events: none;
+        z-index: 2;
+        border-radius: 20%;
+      }
+
+      .ms-slot-hitbox.ms-near {
+        box-shadow:
+          0 0 35px 15px rgba(255, 255, 255, .4);
+      }
+
+      .ms-image-choice {
+        position: absolute;
+        width: 25.5%;
+        height: 34%;
+        padding: 0;
+        border: 0;
+        margin: 0;
+        background: transparent;
         cursor: grab;
         touch-action: none;
-        display: grid;
-        place-items: center;
-        border: none;
-        background: transparent;
-        padding: 0;
-        color: #26325e;
+        z-index: 10;
+        transform: translate(-50%, -50%);
         -webkit-tap-highlight-color: transparent;
       }
 
-      .ms-choice:focus-visible {
-        outline: 4px solid #fff;
-        outline-offset: 5px;
-        border-radius: 22px;
-      }
-
-      .ms-choice.dragging {
-        cursor: grabbing;
-        z-index: 50;
-        filter: drop-shadow(0 15px 20px #0005);
-      }
-
-      .ms-choice-body {
-        position: absolute;
-        inset: 0;
-        clip-path: polygon(
-          34% 0%, 66% 0%,
-          66% 20%, 100% 20%,
-          100% 76%, 66% 76%,
-          66% 100%, 34% 100%,
-          34% 76%, 0% 76%,
-          0% 20%, 34% 20%
-        );
-        background:
-          linear-gradient(
-            145deg,
-            #ffffff88,
-            transparent 35%,
-            #00000028
-          ),
-          var(--choice-color);
-        box-shadow: inset 0 -12px 0 #0002;
-      }
-
-      .ms-choice-content {
-        position: relative;
-        z-index: 2;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 5px;
+      .ms-image-choice img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
         pointer-events: none;
-        transform: translateY(-3%);
+        user-select: none;
+        -webkit-user-drag: none;
       }
 
-      .ms-choice-icon {
-        font-size: clamp(30px, 5vw, 62px);
-        line-height: 1;
-        filter: drop-shadow(0 3px 3px #0003);
+      .ms-image-choice.dragging {
+        cursor: grabbing;
+        z-index: 30;
+        filter: drop-shadow(
+          0 12px 15px rgba(0, 0, 0, .35)
+        );
       }
 
-      .ms-choice-label {
-        font-size: clamp(15px, 2.2vw, 28px);
-        font-weight: 900;
-        white-space: nowrap;
-        padding: 7px 13px;
-        border-radius: 16px;
-        background: #fff9;
-        box-shadow: 0 3px 8px #0002;
-      }
-
-      .ms-choice[data-mode="mystery"] {
-        color: #382060;
-      }
-
-      .ms-choice.snapping {
+      .ms-image-choice.snapping {
         transition:
-          left .28s ease,
-          top .28s ease,
-          transform .28s ease;
+          left 350ms cubic-bezier(.2,.8,.2,1),
+          top 350ms cubic-bezier(.2,.8,.2,1),
+          transform 350ms ease;
+        z-index: 40;
       }
 
-      .ms-flash {
+      .ms-image-choice:focus-visible {
+        outline: 3px solid white;
+        outline-offset: 4px;
+      }
+
+      .ms-home-instruction {
+        position: absolute;
+        left: 50%;
+        bottom: 3%;
+        transform: translateX(-50%);
+        z-index: 5;
+        color: #ffffff;
+        background: rgba(38, 24, 69, .78);
+        border: 2px solid rgba(255,255,255,.65);
+        border-radius: 40px;
+        padding: 10px 22px;
+        font-size: clamp(12px, 1.45vw, 20px);
+        font-weight: 800;
+        text-align: center;
+        white-space: nowrap;
+        pointer-events: none;
+        box-shadow: 0 5px 18px #0003;
+      }
+
+      .ms-home-flash {
         position: absolute;
         inset: 0;
-        z-index: 90;
-        background: #fff;
+        z-index: 80;
+        background: white;
         opacity: 0;
         pointer-events: none;
       }
 
-      .ms-flash.active {
-        animation: msFlash .65s ease forwards;
+      .ms-home-flash.active {
+        animation: msImageFlash 650ms ease forwards;
       }
 
-      @keyframes msFlash {
+      @keyframes msImageFlash {
         0% { opacity: 0; }
-        45% { opacity: .95; }
+        45% { opacity: .9; }
         100% { opacity: 0; }
       }
 
@@ -298,9 +236,9 @@
         place-items: center;
         background:
           radial-gradient(
-            circle at 50% 30%,
-            #fff3d6,
-            #d9b7d7
+            circle at center,
+            #fff1d5,
+            #b89bdb
           );
         font-family: Arial, "Noto Sans TC", sans-serif;
       }
@@ -310,52 +248,40 @@
       }
 
       .ms-placeholder-card {
-        text-align: center;
-        padding: 30px;
         max-width: 90vw;
-        background: #ffffffd9;
-        border-radius: 28px;
-        box-shadow: 0 15px 45px #553b632c;
+        padding: 35px;
+        text-align: center;
+        border-radius: 25px;
+        background: #ffffffed;
+        box-shadow: 0 15px 40px #0002;
       }
 
       .ms-placeholder-card h1 {
-        color: #522078;
-        font-size: clamp(28px, 5vw, 48px);
+        color: #593087;
       }
 
       .ms-placeholder-card p {
-        color: #624d71;
+        color: #655271;
         line-height: 1.8;
       }
 
       .ms-back-button {
         border: none;
-        border-radius: 16px;
-        padding: 14px 24px;
-        background: #713cbb;
-        color: #fff;
+        border-radius: 15px;
+        background: #7644bd;
+        color: white;
+        padding: 14px 25px;
         font-size: 18px;
         font-weight: bold;
         cursor: pointer;
       }
 
-      @media (max-width: 600px) {
-        .ms-hole {
-          top: 32%;
-        }
-
-        .ms-instruction {
-          top: 51%;
-        }
-
-        .ms-choices {
-          bottom: 9%;
-          gap: 12px;
-        }
-      }
-
       @media (prefers-reduced-motion: reduce) {
-        .ms-hole-inner {
+        .ms-image-choice.snapping {
+          transition-duration: 0ms;
+        }
+
+        .ms-home-flash.active {
           animation: none;
         }
       }
@@ -364,153 +290,127 @@
     document.head.appendChild(style);
   }
 
-  function createWall(container) {
-    const wall = document.createElement("div");
-    wall.className = "ms-wall";
-    wall.setAttribute("aria-hidden", "true");
+  // ================================
+  // 04. 建立圖片積木
+  // ================================
 
-    for (let i = 0; i < 117; i++) {
-      const piece = document.createElement("div");
-      piece.className = "ms-wall-piece";
-
-      const colorIndex =
-        (i * 7 + Math.floor(i / 13) * 3) %
-        COLORS.length;
-
-      piece.style.setProperty(
-        "--piece-color",
-        COLORS[colorIndex]
-      );
-
-      piece.style.setProperty(
-        "--piece-angle",
-        ((i % 3) - 1) * 90 + "deg"
-      );
-
-      wall.appendChild(piece);
-    }
-
-    container.appendChild(wall);
-  }
-
-  function createChoice(mode, color, icon, label) {
+  function createChoice(mode, imagePath, label) {
     const button = document.createElement("button");
 
     button.type = "button";
-    button.className = "ms-choice";
+    button.className = "ms-image-choice";
     button.dataset.mode = mode;
+
     button.setAttribute(
       "aria-label",
       "拖曳進入" + label
     );
 
-    button.style.setProperty(
-      "--choice-color",
-      color
-    );
+    const img = document.createElement("img");
 
-    button.innerHTML = `
-      <span class="ms-choice-body"></span>
-      <span class="ms-choice-content">
-        <span class="ms-choice-icon">${icon}</span>
-        <span class="ms-choice-label">${label}</span>
-      </span>
-    `;
+    img.src = imagePath;
+    img.alt = label;
+    img.draggable = false;
 
-    button.addEventListener(
-      "pointerdown",
-      startDrag
-    );
+    button.appendChild(img);
 
-    button.addEventListener(
-      "pointermove",
-      moveDrag
-    );
+    button.addEventListener("pointerdown", startDrag);
+    button.addEventListener("pointermove", moveDrag);
+    button.addEventListener("pointerup", endDrag);
+    button.addEventListener("pointercancel", cancelDrag);
+    button.addEventListener("lostpointercapture", event => {
+      if (
+        dragging &&
+        event.pointerId === dragging.pointerId &&
+        !switching
+      ) {
+        restoreChoice();
+      }
+    });
 
-    button.addEventListener(
-      "pointerup",
-      endDrag
-    );
-
-    button.addEventListener(
-      "pointercancel",
-      cancelDrag
-    );
-
-    // 鍵盤使用者可以直接按 Enter 進入。
+    // 保留鍵盤操作
     button.addEventListener("keydown", event => {
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
-        enterMode(mode);
+        if (!switching) enterMode(mode);
       }
     });
+
+    setChoicePosition(button, mode);
 
     return button;
   }
 
+  function setChoicePosition(button, mode) {
+    const position = CONFIG[mode];
+
+    button.style.left = (position.x * 100) + "%";
+    button.style.top = (position.y * 100) + "%";
+  }
+
+  // ================================
+  // 05. 建立首頁
+  // ================================
+
   function createHome() {
-    const home = document.createElement("div");
+    home = document.createElement("div");
     home.id = "msHome";
 
-    createWall(home);
+    stage = document.createElement("div");
+    stage.id = "msStage";
 
-    const hole = document.createElement("div");
-    hole.className = "ms-hole";
-    hole.id = "msHole";
-    hole.innerHTML =
-      '<div class="ms-hole-inner"></div>';
+    slot = document.createElement("div");
+    slot.className = "ms-slot-hitbox";
+    slot.id = "msHole";
 
-    home.appendChild(hole);
+    stage.appendChild(slot);
+
+    const free = createChoice(
+      "free",
+      ASSETS.free,
+      "自由創作"
+    );
+
+    const mystery = createChoice(
+      "mystery",
+      ASSETS.mystery,
+      "神秘題目"
+    );
+
+    stage.appendChild(free);
+    stage.appendChild(mystery);
 
     const instruction = document.createElement("div");
-    instruction.className = "ms-instruction";
+    instruction.className = "ms-home-instruction";
     instruction.textContent =
-      "把喜歡的積木放進發光缺口！";
+      "拖曳喜歡的積木，放進中央發光缺口！";
 
-    home.appendChild(instruction);
+    stage.appendChild(instruction);
 
-    const choices = document.createElement("div");
-    choices.className = "ms-choices";
+    flash = document.createElement("div");
+    flash.className = "ms-home-flash";
 
-    choices.appendChild(
-      createChoice(
-        "free",
-        "#ffca16",
-        "🧩",
-        "自由創作"
-      )
-    );
+    stage.appendChild(flash);
 
-    choices.appendChild(
-      createChoice(
-        "mystery",
-        "#9751db",
-        "🎁",
-        "神祕題目"
-      )
-    );
-
-    home.appendChild(choices);
-
-    const flash = document.createElement("div");
-    flash.className = "ms-flash";
-    flash.id = "msFlash";
-    home.appendChild(flash);
-
+    home.appendChild(stage);
     document.body.appendChild(home);
   }
 
-  function createMysteryPlaceholder() {
-    const page = document.createElement("div");
-    page.id = "msMysteryPlaceholder";
+  // ================================
+  // 06. 神祕題目頁
+  // 先保留原本的佔位頁面
+  // ================================
 
-    page.innerHTML = `
+  function createMysteryPlaceholder() {
+    mysteryPage = document.createElement("div");
+    mysteryPage.id = "msMysteryPlaceholder";
+
+    mysteryPage.innerHTML = `
       <div class="ms-placeholder-card">
         <h1>🎁 神祕題目</h1>
         <p>
-          首頁拖曳成功！<br>
-          下一階段將在這裡加入<br>
-          你確認的十個立體 Plus-Plus 關卡。
+          已成功進入神祕題目模式！<br>
+          下一階段將加入 Plus-Plus 關卡選擇頁。
         </p>
         <button
           class="ms-back-button"
@@ -522,51 +422,90 @@
       </div>
     `;
 
-    document.body.appendChild(page);
+    document.body.appendChild(mysteryPage);
 
-    document.getElementById(
-      "msBackHome"
-    ).addEventListener("click", showHome);
+    document
+      .getElementById("msBackHome")
+      .addEventListener("click", showHome);
   }
 
-  function getHoleCenter() {
-    const rect = document.getElementById(
-      "msHole"
-    ).getBoundingClientRect();
+  // ================================
+  // 07. 座標換算
+  // ================================
+
+  function getStageRect() {
+    return stage.getBoundingClientRect();
+  }
+
+  function getSlotCenter() {
+    const rect = getStageRect();
 
     return {
-      x: rect.left + rect.width / 2,
-      y: rect.top + rect.height / 2,
-      radius: rect.width * 0.75
+      x: rect.left + rect.width * CONFIG.slot.x,
+      y: rect.top + rect.height * CONFIG.slot.y,
+      radiusX: rect.width * CONFIG.slot.radiusX,
+      radiusY: rect.height * CONFIG.slot.radiusY
     };
   }
 
+  function getElementCenter(element) {
+    const rect = element.getBoundingClientRect();
+
+    return {
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2
+    };
+  }
+
+  function isInsideSlot(x, y) {
+    const center = getSlotCenter();
+
+    const dx = (x - center.x) / center.radiusX;
+    const dy = (y - center.y) / center.radiusY;
+
+    return dx * dx + dy * dy <= 1;
+  }
+
+  // ================================
+  // 08. 開始拖曳
+  // ================================
+
   function startDrag(event) {
     if (switching || dragging) return;
-    if (event.button !== 0) return;
+
+    if (
+      event.pointerType === "mouse" &&
+      event.button !== 0
+    ) {
+      return;
+    }
 
     const element = event.currentTarget;
+    const stageRect = getStageRect();
     const rect = element.getBoundingClientRect();
 
     dragging = {
       element,
       pointerId: event.pointerId,
-      offsetX: event.clientX - rect.left,
-      offsetY: event.clientY - rect.top,
-      originalStyle: element.getAttribute("style")
+      startPointerX: event.clientX,
+      startPointerY: event.clientY,
+      startCenterX:
+        rect.left + rect.width / 2 - stageRect.left,
+      startCenterY:
+        rect.top + rect.height / 2 - stageRect.top
     };
 
-    element.style.position = "fixed";
-    element.style.left = rect.left + "px";
-    element.style.top = rect.top + "px";
-    element.style.width = rect.width + "px";
-    element.style.height = rect.height + "px";
-    element.style.margin = "0";
+    element.classList.remove("snapping");
     element.classList.add("dragging");
 
     element.setPointerCapture(event.pointerId);
+
     event.preventDefault();
   }
+
+  // ================================
+  // 09. 拖曳移動
+  // ================================
 
   function moveDrag(event) {
     if (!dragging) return;
@@ -575,51 +514,51 @@
       return;
     }
 
-    const element = dragging.element;
+    const d = dragging;
 
-    element.style.left =
-      event.clientX - dragging.offsetX + "px";
+    const deltaX = event.clientX - d.startPointerX;
+    const deltaY = event.clientY - d.startPointerY;
 
-    element.style.top =
-      event.clientY - dragging.offsetY + "px";
+    const stageRect = getStageRect();
 
-    const center = getHoleCenter();
+    const newX = d.startCenterX + deltaX;
+    const newY = d.startCenterY + deltaY;
 
-    const distance = Math.hypot(
-      event.clientX - center.x,
-      event.clientY - center.y
-    );
+    d.element.style.left =
+      (newX / stageRect.width * 100) + "%";
 
-    document.getElementById(
-      "msHole"
-    ).classList.toggle(
+    d.element.style.top =
+      (newY / stageRect.height * 100) + "%";
+
+    const center = getElementCenter(d.element);
+
+    slot.classList.toggle(
       "ms-near",
-      distance < center.radius
+      isInsideSlot(center.x, center.y)
     );
   }
+
+  // ================================
+  // 10. 還原積木
+  // ================================
 
   function restoreChoice() {
     if (!dragging) return;
 
     const element = dragging.element;
-
-    if (dragging.originalStyle === null) {
-      element.removeAttribute("style");
-    } else {
-      element.setAttribute(
-        "style",
-        dragging.originalStyle
-      );
-    }
+    const mode = element.dataset.mode;
 
     element.classList.remove(
       "dragging",
       "snapping"
     );
 
-    document.getElementById(
-      "msHole"
-    ).classList.remove("ms-near");
+    element.style.transform = "";
+    element.style.transition = "";
+
+    setChoicePosition(element, mode);
+
+    slot.classList.remove("ms-near");
 
     dragging = null;
   }
@@ -634,6 +573,10 @@
     restoreChoice();
   }
 
+  // ================================
+  // 11. 放開積木
+  // ================================
+
   function endDrag(event) {
     if (!dragging) return;
 
@@ -641,67 +584,72 @@
       return;
     }
 
+    // 先更新最後一次指標位置
+    moveDrag(event);
+
     const element = dragging.element;
     const mode = element.dataset.mode;
-    const center = getHoleCenter();
 
-    const distance = Math.hypot(
-      event.clientX - center.x,
-      event.clientY - center.y
-    );
+    const center = getElementCenter(element);
 
-    if (distance >= center.radius) {
+    if (!isInsideSlot(center.x, center.y)) {
       restoreChoice();
       return;
     }
 
     switching = true;
 
-    const rect = element.getBoundingClientRect();
-
+    element.classList.remove("dragging");
     element.classList.add("snapping");
 
+    // 自動吸附到背景的中央插槽
     element.style.left =
-      center.x - rect.width / 2 + "px";
+      (CONFIG.slot.x * 100) + "%";
 
     element.style.top =
-      center.y - rect.height / 2 + "px";
+      (CONFIG.slot.y * 100) + "%";
 
-    element.style.transform = "scale(.85)";
+    element.style.transform =
+      "translate(-50%, -50%) scale(.95)";
+
+    slot.classList.add("ms-near");
 
     window.setTimeout(() => {
-      document.getElementById(
-        "msFlash"
-      ).classList.add("active");
-    }, 280);
+      flash.classList.add("active");
+    }, CONFIG.snapDuration);
 
     window.setTimeout(() => {
       restoreChoice();
+      flash.classList.remove("active");
       switching = false;
       enterMode(mode);
-    }, 760);
+    }, CONFIG.enterDelay);
   }
 
+  // ================================
+  // 12. 切換模式
+  // ================================
+
   function enterMode(mode) {
-    const home = document.getElementById("msHome");
-    const mystery = document.getElementById(
-      "msMysteryPlaceholder"
-    );
+    if (mode !== "free" && mode !== "mystery") {
+      return;
+    }
+
+    if (dragging) restoreChoice();
 
     home.classList.add("ms-hidden");
-    mystery.classList.remove("active");
+    mysteryPage.classList.remove("active");
+
+    currentMode = mode;
 
     if (mode === "free") {
-      currentMode = "free";
+      // 保留原本的 p5.js 創作世界
+      // 不刪除角色、不清空環境
+      window.dispatchEvent(new Event("resize"));
+    }
 
-      // 原本的 p5.js 世界一直存在，
-      // 這裡只隱藏首頁，不清空任何作品。
-      if (typeof window.resizeCanvas === "function") {
-        window.dispatchEvent(new Event("resize"));
-      }
-    } else if (mode === "mystery") {
-      currentMode = "mystery";
-      mystery.classList.add("active");
+    if (mode === "mystery") {
+      mysteryPage.classList.add("active");
     }
 
     window.dispatchEvent(
@@ -711,23 +659,37 @@
     );
   }
 
+  // ================================
+  // 13. 返回首頁
+  // ================================
+
   function showHome() {
     if (dragging) restoreChoice();
 
     switching = false;
     currentMode = "home";
 
-    document.getElementById(
-      "msMysteryPlaceholder"
-    ).classList.remove("active");
+    mysteryPage.classList.remove("active");
+    home.classList.remove("ms-hidden");
 
-    document.getElementById(
-      "msHome"
-    ).classList.remove("ms-hidden");
+    flash.classList.remove("active");
+    slot.classList.remove("ms-near");
 
-    document.getElementById(
-      "msFlash"
-    ).classList.remove("active");
+    document.querySelectorAll(
+      ".ms-image-choice"
+    ).forEach(element => {
+      element.classList.remove(
+        "dragging",
+        "snapping"
+      );
+
+      element.style.transform = "";
+
+      setChoicePosition(
+        element,
+        element.dataset.mode
+      );
+    });
 
     window.dispatchEvent(
       new CustomEvent("mindspace:mode-change", {
@@ -735,6 +697,10 @@
       })
     );
   }
+
+  // ================================
+  // 14. 初始化
+  // ================================
 
   function initialize() {
     if (document.getElementById("msHome")) {
@@ -746,10 +712,11 @@
     createMysteryPlaceholder();
 
     console.info(
-      "[Mindspace Home] Plus-Plus 拖曳首頁已載入"
+      "[Mindspace Home] 圖片版首頁 v2 已載入"
     );
   }
 
+  // 保留外部控制介面
   window.MindspaceHome = {
     show: showHome,
     enterMode,

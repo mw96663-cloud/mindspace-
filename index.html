@@ -1,0 +1,6022 @@
+<!-- Mindspace Pages redeploy 2026-11-01 -->
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+
+<title>Mindspace Plus-Plus｜想像有形</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.11.11/p5.min.js"></script>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: Arial, "Noto Sans TC", sans-serif;
+  color: #25374e;
+  background: #164c78;
+  overflow: hidden;
+}
+
+button, input, textarea {
+  font: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+}
+
+button:disabled {
+  opacity: .55;
+  cursor: wait;
+}
+
+.hidden {
+  display: none !important;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+}
+
+#scene canvas {
+  display: block;
+}
+
+#speechBubble {
+  position: fixed;
+  z-index: 10;
+  top: 18px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 13px 20px;
+  max-width: 85vw;
+  background: #fffffff0;
+  border-radius: 24px;
+  text-align: center;
+  box-shadow: 0 5px 20px #0002;
+  pointer-events: none;
+  font-size: 14px;
+}
+
+#floatingControls {
+  position: fixed;
+  z-index: 20;
+  right: 20px;
+  bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.floatButton {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: white;
+  font-size: 26px;
+  box-shadow: 0 5px 20px #0003;
+}
+
+.floatButton.listening {
+  background: #ffe0d8;
+  animation: micPulse 1.2s infinite;
+}
+
+@keyframes micPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 0 #ff817766;
+  }
+  50% {
+    box-shadow: 0 0 0 12px #ff817700;
+  }
+}
+
+.primary {
+  background: #ffcf5d !important;
+  color: #26364b !important;
+}
+
+#sidebar {
+  position: fixed;
+  z-index: 40;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: min(420px, 100vw);
+  background: white;
+  box-shadow: -8px 0 30px #0003;
+  display: flex;
+  flex-direction: column;
+  transform: translateX(105%);
+  transition: transform .25s;
+}
+
+#sidebar.open {
+  transform: translateX(0);
+}
+
+.sidebarHeader {
+  padding: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #e7edf4;
+}
+
+.sidebarHeader h1 {
+  font-size: 19px;
+  margin: 0;
+}
+
+.sidebarBody {
+  padding: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+section {
+  margin-bottom: 26px;
+}
+
+section h2 {
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+
+.action {
+  width: 100%;
+  padding: 13px;
+  margin: 5px 0;
+  border-radius: 13px;
+  background: #e5f1fc;
+  color: #26364b;
+  font-weight: 600;
+}
+
+.field {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #d7e0e9;
+  border-radius: 12px;
+  margin: 6px 0;
+}
+
+.muted {
+  font-size: 13px;
+  color: #65788d;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+#status,
+#aiTestResult,
+#mindspaceCommandStatus {
+  padding: 12px;
+  border-radius: 12px;
+  background: #f1f5f9;
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+#aiTestResult {
+  white-space: pre-wrap;
+  margin-top: 8px;
+  max-height: 190px;
+  overflow-y: auto;
+}
+
+#status.success,
+#mindspaceCommandStatus.success {
+  background: #e4f7eb;
+  color: #16643b;
+}
+
+#status.error,
+#mindspaceCommandStatus.error {
+  background: #fff0ec;
+  color: #a2382c;
+}
+
+#mindspaceCommandStatus {
+  margin-top: 10px;
+  white-space: pre-wrap;
+}
+
+#mindspaceCommandSelection {
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff5d6;
+  color: #71572b;
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 10px;
+}
+
+#chatInput {
+  resize: vertical;
+  min-height: 90px;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: #09182cdd;
+  display: grid;
+  place-items: center;
+  padding: 12px;
+}
+
+.modalCard {
+  width: min(700px, 100%);
+  max-height: 96vh;
+  overflow-y: auto;
+  background: white;
+  border-radius: 24px;
+  padding: 20px;
+}
+
+.modalCard h2 {
+  margin: 0 0 12px;
+  font-size: 19px;
+}
+
+#cameraVideo {
+  display: block;
+  width: 100%;
+  max-height: 55vh;
+  object-fit: contain;
+  background: #e7eef5;
+  border-radius: 15px;
+}
+
+.row {
+  display: flex;
+  gap: 9px;
+}
+
+.row > * {
+  flex: 1;
+  min-width: 0;
+}
+
+#bridgeFrame {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+  border: 0;
+}
+
+#editArea {
+  width: 100%;
+  height: min(48vh, 420px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border-radius: 15px;
+  background-color: white;
+  background-image:
+    linear-gradient(45deg, #ddd 25%, transparent 25%),
+    linear-gradient(-45deg, #ddd 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #ddd 75%),
+    linear-gradient(-45deg, transparent 75%, #ddd 75%);
+  background-size: 22px 22px;
+  background-position:
+    0 0,
+    0 11px,
+    11px -11px,
+    -11px 0;
+}
+
+#editCanvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.toolRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin: 12px 0;
+}
+
+.toolRow button {
+  flex: 1;
+  min-width: 85px;
+  padding: 11px 8px;
+  border-radius: 11px;
+  background: #e8f0f7;
+  color: #26364b;
+}
+
+.toolRow button.active {
+  background: #315eaa;
+  color: white;
+}
+
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 10px 0;
+}
+
+.sliderRow input {
+  flex: 1;
+}
+
+#classificationPreview {
+  display: block;
+  width: 100%;
+  height: 175px;
+  object-fit: contain;
+  background: #e8edf3;
+  border-radius: 14px;
+}
+
+.typeButton {
+  flex: 1;
+  padding: 16px 8px;
+  border: 2px solid #d8e1eb;
+  background: #f5f8fc;
+  border-radius: 15px;
+  font-weight: bold;
+}
+
+.typeButton.selected {
+  border-color: #315eaa;
+  background: #dceaff;
+}
+
+#aiSuggestion {
+  padding: 12px;
+  background: #eef5ff;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.7;
+  margin: 10px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+#heroList {
+  font-size: 13px;
+  color: #546a82;
+  line-height: 1.8;
+}
+
+@media (max-width: 600px) {
+  .floatButton {
+    width: 54px;
+    height: 54px;
+  }
+
+  #floatingControls {
+    right: 12px;
+    bottom: 14px;
+  }
+
+  #speechBubble {
+    font-size: 12px;
+  }
+
+  .modalCard {
+    padding: 14px;
+  }
+}
+  
+/* ==========================================
+   Mindspace｜9:16 直式全螢幕展示
+   不允許整頁水平或垂直捲動
+========================================== */
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  height: 100dvh;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+#scene canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* 四個主要操作按鈕固定在右下角 */
+#floatingControls {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 20;
+}
+
+.floatButton {
+  width: clamp(48px, 6vw, 66px);
+  height: clamp(48px, 6vw, 66px);
+  font-size: clamp(21px, 2.8vw, 29px);
+  flex-shrink: 0;
+}
+
+/* 上方提示文字 */
+#speechBubble {
+  top: 14px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  font-size: clamp(12px, 1.5vw, 16px);
+}
+
+/* 工作台不再超出畫面 */
+#sidebar {
+  width: min(100vw, 760px);
+  height: 100dvh;
+  top: 0;
+  bottom: 0;
+  overflow: hidden;
+}
+
+.sidebarHeader {
+  flex-shrink: 0;
+  padding: 12px 16px;
+}
+
+.sidebarBody {
+  flex: 1;
+  min-height: 0;
+  padding: 12px;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-content: start;
+  gap: 10px;
+}
+
+.sidebarBody section {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid #e7edf4;
+  border-radius: 14px;
+}
+
+.sidebarBody section h2 {
+  margin-bottom: 7px;
+  font-size: clamp(12px, 1.4vw, 16px);
+}
+
+.sidebarBody .action {
+  padding: 9px;
+  margin: 3px 0;
+  font-size: clamp(11px, 1.2vw, 14px);
+}
+
+.sidebarBody .muted {
+  font-size: clamp(11px, 1.1vw, 13px);
+}
+
+#chatInput {
+  min-height: 58px;
+  resize: none;
+}
+
+/* 所有操作視窗保持在螢幕內 */
+.modal {
+  width: 100vw;
+  height: 100dvh;
+  padding: 12px;
+  overflow: hidden;
+}
+
+.modalCard {
+  width: min(92vw, 700px);
+  max-height: calc(100dvh - 24px);
+  padding: 16px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+#cameraVideo {
+  max-height: 40dvh;
+}
+
+#editArea {
+  height: min(34dvh, 420px);
+}
+
+#classificationPreview {
+  height: min(18dvh, 220px);
+}
+
+/* 較窄的直式裝置改成單欄工作台 */
+@media (max-width: 700px) {
+  #sidebar {
+    width: 100vw;
+  }
+
+  .sidebarBody {
+    grid-template-columns: 1fr;
+    overflow-y: auto;
+  }
+
+  .modalCard {
+    width: 100%;
+    padding: 12px;
+  }
+
+  #floatingControls {
+    right: 12px;
+    bottom: 12px;
+  }
+}
+
+</style>
+</head>
+
+<body>
+
+<main id="scene"></main>
+
+<div id="speechBubble">
+  用 Plus-Plus 積木創造你的想像世界！
+</div>
+
+<nav id="floatingControls">
+  <button
+    id="bubbleCamera"
+    class="floatButton"
+    title="拍攝作品"
+  >📷</button>
+
+  <button
+    id="bubbleMic"
+    class="floatButton"
+    title="語音自由創造"
+  >🎙️</button>
+
+  <button
+    id="bubbleWorkbench"
+    class="floatButton primary"
+    title="工作台"
+  >🧺</button>
+
+  <button
+    id="bubbleFullscreen"
+    class="floatButton"
+    type="button"
+    title="切換全螢幕"
+    aria-label="進入全螢幕"
+    aria-pressed="false"
+  >⛶</button>
+</nav>
+
+<aside id="sidebar">
+  <header class="sidebarHeader">
+    <h1>🧺 Mindspace 工作台</h1>
+
+    <button
+      id="closeWorkbench"
+      class="floatButton"
+      style="width:38px;height:38px;font-size:21px"
+    >×</button>
+  </header>
+
+  <div class="sidebarBody">
+
+    <section>
+      <h2>🔌 OpenAI 真實連線</h2>
+
+      <div id="status">
+        正在連接 Bridge……
+      </div>
+
+      <button
+        id="testBridge"
+        class="action primary"
+      >
+        測試 OpenAI 真實連線
+      </button>
+
+      <button
+        id="reloadBridge"
+        class="action"
+      >
+        重新連接 Bridge
+      </button>
+
+      <div id="aiTestResult">
+        等待測試。
+      </div>
+    </section>
+
+    <section>
+      <h2>STEP 01｜自由拼接</h2>
+
+      <p class="muted">
+        孩子可以創造任何角色、建築、地形或想像中的物件。
+      </p>
+    </section>
+
+    <section>
+      <h2>STEP 02｜拍照與 AI 去背</h2>
+
+      <button
+        id="openCamera"
+        class="action primary"
+      >
+        📷 開啟攝影機
+      </button>
+
+      <button
+        id="uploadPhoto"
+        class="action"
+      >
+        🖼️ 上傳照片
+      </button>
+
+      <input
+        id="photoFile"
+        type="file"
+        accept="image/*"
+        class="hidden"
+      >
+
+      <p class="muted">
+        去背成功後，可以用橡皮擦、恢復筆刷及復原功能調整圖片。
+      </p>
+    </section>
+
+    <section>
+      <h2>STEP 03～05｜共同世界</h2>
+
+      <div id="heroList">
+        目前還沒有作品。
+      </div>
+
+      <button
+        id="clearWorld"
+        class="action"
+      >
+        清空目前世界
+      </button>
+    </section>
+
+    <section id="mindspaceCommandPanel">
+      <h2>STEP 06｜我的想像指令</h2>
+
+      <p class="muted">
+        點選世界中的積木角色，再告訴它要做什麼。
+        你可以用文字或語音自由創造。
+      </p>
+
+      <div id="mindspaceCommandSelection">
+        🎯 請先選取世界中的角色
+      </div>
+
+      <textarea
+        id="chatInput"
+        class="field"
+        rows="3"
+        placeholder="例如：我的小狗會在天上飛、讓牠跑步、長出彩虹翅膀"
+      ></textarea>
+
+      <button
+        id="mindspaceCommandSend"
+        class="action primary"
+      >
+        ✨ 讓我的想像成真
+      </button>
+
+      <button
+        id="micButton"
+        class="action"
+      >
+        🎙️ 說出我的想像
+      </button>
+
+      <div
+        id="mindspaceCommandStatus"
+        aria-live="polite"
+      >
+        等待你的創作指令。
+      </div>
+    </section>
+
+  </div>
+</aside>
+
+<!-- 攝影機 -->
+<div id="cameraModal" class="modal hidden">
+  <div class="modalCard">
+
+    <h2>📷 拍攝 Plus-Plus 積木</h2>
+
+    <video
+      id="cameraVideo"
+      autoplay
+      playsinline
+      muted
+    ></video>
+
+    <p id="cameraMessage" class="muted">
+      將作品放在畫面中央。
+    </p>
+
+    <button
+      id="captureButton"
+      class="action primary"
+    >
+      拍照
+    </button>
+
+    <button
+      id="switchCamera"
+      class="action"
+    >
+      切換鏡頭
+    </button>
+
+    <button
+      id="closeCamera"
+      class="action"
+    >
+      關閉
+    </button>
+
+  </div>
+</div>
+
+<!-- 去背與修圖 -->
+<div id="editorModal" class="modal hidden">
+  <div class="modalCard">
+
+    <h2>✨ 積木去背與修圖</h2>
+
+    <div id="editArea">
+      <canvas id="editCanvas"></canvas>
+    </div>
+
+    <p id="editorMessage" class="muted">
+      準備進行 AI 去背。
+    </p>
+
+   <label for="removeBgEngine" class="muted">
+  選擇去背引擎
+</label>
+
+<select
+  id="removeBgEngine"
+  class="field"
+>
+  <option value="removeBackgroundRemoveBgTest">
+    remove.bg｜快速去背測試
+  </option>
+
+  <option value="removeBackgroundAI">
+    OpenAI｜原本去背引擎
+  </option>
+</select>
+
+<button
+  id="removeBgAI"
+  class="action primary"
+>
+  開始 AI 去背
+</button>
+    <div id="editTools" class="hidden">
+
+      <div class="toolRow">
+        <button id="eraserTool" class="active">
+          🧽 橡皮擦
+        </button>
+
+        <button id="restoreTool">
+          🖌️ 恢復筆刷
+        </button>
+      </div>
+
+      <div class="sliderRow">
+        <label for="brushSize">筆刷</label>
+
+        <input
+          id="brushSize"
+          type="range"
+          min="5"
+          max="120"
+          value="30"
+        >
+
+        <span id="brushSizeValue">30</span>
+      </div>
+
+      <div class="toolRow">
+        <button id="undoEdit">↶ 復原</button>
+        <button id="redoEdit">↷ 重做</button>
+        <button id="resetEdit">重設修圖</button>
+      </div>
+
+      <button
+        id="saveEditor"
+        class="action primary"
+      >
+        ✓ 完成修圖，加入世界
+      </button>
+
+    </div>
+
+    <button
+      id="closeEditor"
+      class="action"
+    >
+      取消
+    </button>
+
+  </div>
+</div>
+
+<!-- AI 角色／環境判斷 -->
+<div id="classificationModal" class="modal hidden">
+  <div class="modalCard">
+
+    <h2>🌟 你創造了什麼？</h2>
+
+    <img
+      id="classificationPreview"
+      alt="積木作品"
+    >
+
+    <p class="muted">
+      先告訴 AI 你的想像。
+      AI 會提出建議，但最後由你決定。
+    </p>
+
+    <textarea
+      id="classificationDescription"
+      class="field"
+      rows="3"
+      placeholder="例如：這是一隻會在天空游泳的魚，牠很害羞"
+    ></textarea>
+
+    <button
+      id="classificationMic"
+      class="action"
+    >
+      🎙️ 按這裡，說出你的想像
+    </button>
+
+    <p
+      id="classificationVoiceStatus"
+      class="muted"
+      aria-live="polite"
+    >
+      按麥克風後說出作品的身分、能力與生活環境。
+    </p>
+
+    <button
+      id="analyzeCreationAI"
+      class="action primary"
+    >
+      ✨ 讓 AI 理解我的作品
+    </button>
+
+    <div id="aiSuggestion">
+      等待孩子描述作品。
+    </div>
+
+    <p class="muted">
+      你可以接受 AI 的判斷，也可以自己更正：
+    </p>
+
+    <div class="row">
+      <button
+        id="classifyCharacter"
+        class="typeButton"
+      >
+        🐉 Character
+        角色
+      </button>
+
+      <button
+        id="classifyEnvironment"
+        class="typeButton"
+      >
+        🏰 Environment
+        環境
+      </button>
+    </div>
+
+    <p id="classificationMessage" class="muted">
+      請選擇角色或環境。
+    </p>
+
+    <button
+      id="confirmClassification"
+      class="action primary"
+    >
+      確認我的創作
+    </button>
+
+    <button
+      id="skipClassification"
+      class="action"
+    >
+      稍後再決定
+    </button>
+
+  </div>
+</div>
+
+<iframe
+  id="bridgeFrame"
+  title="Mindspace AI Bridge"
+></iframe>
+
+<script>
+"use strict";
+
+/* =====================================================
+   01｜基本設定
+===================================================== */
+
+const GAS_URL =
+  "https://script.google.com/macros/s/AKfycbwUooMD69_NMBhTzxf0Os_D6BEGb3QsGyhXpTGv09emRcG_4du219K4qO_FggY1vnLHOg/exec";
+
+const APP = "mindspace-v2";
+
+const $ = id => document.getElementById(id);
+
+let bridgeToken = "";
+let bridgeWindow = null;
+let bridgeOrigin = "";
+let bridgeReady = false;
+let bridgeTimer = null;
+let helloTimer = null;
+let bridgeGeneration = 0;
+
+const pending = new Map();
+
+let cameraStream = null;
+let facingMode = "environment";
+let currentPhoto = "";
+let processing = false;
+
+const editCanvas = $("editCanvas");
+
+const editCtx = editCanvas.getContext("2d", {
+  willReadFrequently: true
+});
+
+let editReady = false;
+let editMode = "erase";
+let brushSize = 30;
+let isDrawing = false;
+let lastPoint = null;
+let originalCutout = null;
+
+let editHistory = [];
+let editHistoryIndex = -1;
+
+const MAX_HISTORY = 12;
+
+let latestCreationId = null;
+let latestCreationImage = "";
+let selectedType = "";
+let aiSuggestion = null;
+let analyzing = false;
+
+function say(message) {
+  $("speechBubble").textContent = message;
+}
+
+function setStatus(message, kind = "") {
+  $("status").textContent = message;
+  $("status").className = kind;
+}
+
+function openModal(id) {
+  $(id).classList.remove("hidden");
+}
+
+function closeModal(id) {
+  $(id).classList.add("hidden");
+}
+
+function googleOrigin(origin) {
+  try {
+    const url = new URL(origin);
+
+    return (
+      url.protocol === "https:" &&
+      (
+        url.hostname === "script.google.com" ||
+        url.hostname === "script.googleusercontent.com" ||
+        url.hostname.endsWith(".googleusercontent.com")
+      )
+    );
+  } catch {
+    return false;
+  }
+}
+
+/* =====================================================
+   02｜工作台
+===================================================== */
+
+$("bubbleWorkbench").onclick = () => {
+  $("sidebar").classList.add("open");
+  updateCommandSelection();
+};
+
+$("closeWorkbench").onclick = () => {
+  $("sidebar").classList.remove("open");
+};
+
+/* =====================================================
+   03｜Bridge 通訊
+   保留原本已使用的通訊協定
+===================================================== */
+
+function connectBridge() {
+  bridgeGeneration++;
+
+  const generation = bridgeGeneration;
+
+  bridgeReady = false;
+  bridgeWindow = null;
+  bridgeOrigin = "";
+
+  clearTimeout(bridgeTimer);
+  clearInterval(helloTimer);
+
+  for (const job of pending.values()) {
+    clearTimeout(job.timer);
+
+    job.reject(
+      new Error("Bridge 已重新連線")
+    );
+  }
+
+  pending.clear();
+
+  bridgeToken = crypto.randomUUID();
+
+  const url = new URL(GAS_URL);
+
+  url.searchParams.set(
+    "bridgeToken",
+    bridgeToken
+  );
+
+  url.searchParams.set(
+    "parentOrigin",
+    location.origin
+  );
+
+  const frame = $("bridgeFrame");
+
+  setStatus("正在連接 Bridge……");
+
+  $("aiTestResult").textContent =
+    "等待 Bridge 握手。";
+
+  frame.src = url.toString();
+
+  helloTimer = setInterval(() => {
+    if (
+      generation !== bridgeGeneration ||
+      bridgeReady
+    ) {
+      clearInterval(helloTimer);
+      return;
+    }
+
+    try {
+      frame.contentWindow.postMessage(
+        {
+          app: APP,
+          token: bridgeToken,
+          kind: "hello"
+        },
+        "https://script.google.com"
+      );
+    } catch {}
+  }, 1000);
+
+  bridgeTimer = setTimeout(() => {
+    if (
+      generation !== bridgeGeneration ||
+      bridgeReady
+    ) {
+      return;
+    }
+
+    setStatus(
+      "Bridge 握手逾時",
+      "error"
+    );
+  }, 15000);
+}
+
+window.addEventListener("message", event => {
+  if (!googleOrigin(event.origin)) return;
+
+  const message = event.data;
+
+  if (
+    !message ||
+    typeof message !== "object"
+  ) {
+    return;
+  }
+
+  if (message.app !== APP) return;
+  if (message.token !== bridgeToken) return;
+
+  if (message.kind === "ready") {
+    if (bridgeReady) return;
+
+    bridgeReady = true;
+    bridgeWindow = event.source;
+    bridgeOrigin = event.origin;
+
+    clearTimeout(bridgeTimer);
+    clearInterval(helloTimer);
+
+    setStatus("Bridge 已建立通訊");
+
+    $("aiTestResult").textContent =
+      "可以測試 OpenAI 真實連線。";
+
+    return;
+  }
+
+  if (message.kind !== "response") return;
+  if (event.source !== bridgeWindow) return;
+
+  const job = pending.get(message.id);
+
+  if (!job) return;
+
+  clearTimeout(job.timer);
+  pending.delete(message.id);
+
+  if (message.ok === true) {
+    job.resolve(message.result);
+  } else {
+    job.reject(
+      new Error(
+        message.error || "後端請求失敗"
+      )
+    );
+  }
+});
+
+function requestAI(
+  type,
+  data = {},
+  timeout = 90000
+) {
+  if (!bridgeReady || !bridgeWindow) {
+    return Promise.reject(
+      new Error("Bridge 尚未連線")
+    );
+  }
+
+  const id = crypto.randomUUID();
+
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      pending.delete(id);
+
+      reject(
+        new Error(type + " 請求逾時")
+      );
+    }, timeout);
+
+    pending.set(id, {
+      resolve,
+      reject,
+      timer
+    });
+
+    try {
+      bridgeWindow.postMessage(
+        {
+          app: APP,
+          token: bridgeToken,
+          kind: "request",
+          id,
+          type,
+          data
+        },
+        bridgeOrigin
+      );
+    } catch (error) {
+      clearTimeout(timer);
+      pending.delete(id);
+      reject(error);
+    }
+  });
+}
+
+$("reloadBridge").onclick = connectBridge;
+
+$("testBridge").onclick = async () => {
+  const button = $("testBridge");
+
+  button.disabled = true;
+
+  try {
+    setStatus("正在測試 OpenAI……");
+
+    const ping = await requestAI("ping");
+
+    if (!ping.alive) {
+      throw new Error("後端 ping 失敗");
+    }
+
+    const ai = await requestAI("checkAI");
+
+    if (!ai.connected || !ai.verified) {
+      throw new Error("OpenAI 驗證失敗");
+    }
+
+    setStatus(
+      "OpenAI 真實連線成功",
+      "success"
+    );
+
+    $("aiTestResult").textContent =
+      "模型：" + ai.model + "\n" +
+      "請求 ID：" + ai.responseId + "\n" +
+      "驗證碼：" + ai.challenge + "\n\n" +
+      ai.text;
+
+  } catch (error) {
+    setStatus(
+      "AI 連線失敗",
+      "error"
+    );
+
+    $("aiTestResult").textContent =
+      error.message;
+
+  } finally {
+    button.disabled = false;
+  }
+};
+
+/* =====================================================
+   04｜圖片工具
+===================================================== */
+
+function loadImageElement(
+  src,
+  revoke = false
+) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+
+    image.onload = () => {
+      if (revoke) {
+        URL.revokeObjectURL(src);
+      }
+
+      resolve(image);
+    };
+
+    image.onerror = () => {
+      if (revoke) {
+        URL.revokeObjectURL(src);
+      }
+
+      reject(
+        new Error("圖片載入失敗")
+      );
+    };
+
+    image.src = src;
+  });
+}
+
+
+function canvasToPhoto(source, width, height) {
+  const start = performance.now();
+
+  // 測試時可切換 900 與 768。
+  const limit = 640;
+  const quality = 0.83;
+
+  const scale = Math.min(
+    1,
+    limit / Math.max(width, height)
+  );
+
+  const canvas = document.createElement("canvas");
+
+  canvas.width = Math.max(
+    1,
+    Math.round(width * scale)
+  );
+
+  canvas.height = Math.max(
+    1,
+    Math.round(height * scale)
+  );
+
+  const ctx = canvas.getContext("2d");
+
+  ctx.drawImage(
+    source,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  const photo = canvas.toDataURL(
+    "image/jpeg",
+    quality
+  );
+
+  const elapsed = performance.now() - start;
+
+  const base64 = photo.split(",")[1] || "";
+  const approximateBytes =
+    Math.floor(base64.length * 3 / 4);
+
+  window.mindspacePhotoTiming = {
+    width: canvas.width,
+    height: canvas.height,
+    prepareMs: elapsed,
+    approximateBytes: approximateBytes
+  };
+
+  console.log(
+    "[Mindspace 去背測速] 圖片準備",
+    {
+      width: canvas.width,
+      height: canvas.height,
+      prepareSeconds: +(elapsed / 1000).toFixed(3),
+      approximateKB: Math.round(
+        approximateBytes / 1024
+      )
+    }
+  );
+
+  return photo;
+}
+
+
+/* =====================================================
+   05｜攝影機
+===================================================== */
+
+async function stopCamera() {
+  if (cameraStream) {
+    cameraStream
+      .getTracks()
+      .forEach(track => track.stop());
+
+    cameraStream = null;
+  }
+
+  $("cameraVideo").srcObject = null;
+}
+
+async function startCamera() {
+  openModal("cameraModal");
+
+  $("cameraMessage").textContent =
+    "正在開啟攝影機……";
+
+  try {
+    await stopCamera();
+
+    cameraStream =
+      await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: {
+          facingMode: {
+            ideal: facingMode
+          },
+          width: {
+            ideal: 1280
+          },
+          height: {
+            ideal: 720
+          }
+        }
+      });
+
+    const video = $("cameraVideo");
+
+    video.srcObject = cameraStream;
+
+    await video.play();
+
+    $("cameraMessage").textContent =
+      "將積木放在中央，按下拍照。";
+
+  } catch (error) {
+    $("cameraMessage").textContent =
+      "攝影機開啟失敗：" + error.message;
+  }
+}
+
+$("openCamera").onclick = startCamera;
+$("bubbleCamera").onclick = startCamera;
+
+$("switchCamera").onclick = async () => {
+  facingMode =
+    facingMode === "environment"
+      ? "user"
+      : "environment";
+
+  await startCamera();
+};
+
+$("closeCamera").onclick = async () => {
+  await stopCamera();
+  closeModal("cameraModal");
+};
+
+$("captureButton").onclick = async () => {
+  const video = $("cameraVideo");
+
+  if (
+    !video.videoWidth ||
+    !video.videoHeight
+  ) {
+    $("cameraMessage").textContent =
+      "攝影機尚未準備完成。";
+
+    return;
+  }
+
+  currentPhoto = canvasToPhoto(
+    video,
+    video.videoWidth,
+    video.videoHeight
+  );
+
+  await stopCamera();
+
+  closeModal("cameraModal");
+
+  await showEditor();
+};
+
+$("uploadPhoto").onclick = () => {
+  $("photoFile").click();
+};
+
+$("photoFile").onchange = async event => {
+  const file = event.target.files?.[0];
+
+  if (!file) return;
+
+  try {
+    const image = await loadImageElement(
+      URL.createObjectURL(file),
+      true
+    );
+
+    currentPhoto = canvasToPhoto(
+      image,
+      image.naturalWidth,
+      image.naturalHeight
+    );
+
+    await showEditor();
+
+  } catch (error) {
+    alert(
+      "照片讀取失敗：" + error.message
+    );
+  }
+
+  event.target.value = "";
+};
+
+/* =====================================================
+   06｜AI 去背編輯器
+===================================================== */
+
+async function showEditor() {
+  editReady = false;
+  originalCutout = null;
+
+  editHistory = [];
+  editHistoryIndex = -1;
+
+  $("editTools").classList.add("hidden");
+  $("removeBgAI").classList.remove("hidden");
+
+  $("editorMessage").textContent =
+    "請先執行 AI 去背。";
+
+  const image =
+    await loadImageElement(currentPhoto);
+
+  editCanvas.width = image.naturalWidth;
+  editCanvas.height = image.naturalHeight;
+
+  editCtx.clearRect(
+    0,
+    0,
+    editCanvas.width,
+    editCanvas.height
+  );
+
+  editCtx.drawImage(
+    image,
+    0,
+    0,
+    editCanvas.width,
+    editCanvas.height
+  );
+
+  openModal("editorModal");
+}
+
+
+/* =====================================================
+   Mindspace｜雙引擎 AI 去背測試
+
+   OpenAI：原本去背引擎
+   remove.bg：新增快速去背測試
+
+   保留：
+   - 相機拍照
+   - 原始圖片
+   - 透明 PNG
+   - 手動擦除
+   - 恢復筆刷
+   - 復原與重做
+   - 加入 p5.js 世界
+   - 完整測速
+===================================================== */
+
+$("removeBgAI").onclick = async () => {
+
+  if (processing || !currentPhoto) {
+    return;
+  }
+
+  processing = true;
+
+  const button = $("removeBgAI");
+  const engineSelect = $("removeBgEngine");
+
+  const engine = engineSelect.value;
+
+  const providerName =
+    engine === "removeBackgroundRemoveBgTest"
+      ? "remove.bg"
+      : "OpenAI";
+
+  button.disabled = true;
+  engineSelect.disabled = true;
+
+  button.textContent =
+    providerName + " 去背處理中……";
+
+  $("editorMessage").textContent =
+    "正在使用 " +
+    providerName +
+    " 去背並測量耗時……";
+
+  const totalStart = performance.now();
+
+  let bridgeSeconds = 0;
+  let imageLoadSeconds = 0;
+  let backendTiming = null;
+
+  try {
+
+    /* 01｜向選定的真實 API 發送圖片 */
+
+    const requestStart = performance.now();
+
+    const response = await requestAI(
+      engine,
+      {
+        image: currentPhoto
+      },
+      180000
+    );
+
+    bridgeSeconds =
+      (performance.now() - requestStart) / 1000;
+
+    backendTiming = response?.timing || null;
+
+    /* 02｜驗證回傳的 PNG */
+
+    if (
+      !response?.success ||
+      typeof response.image !== "string" ||
+      !response.image.startsWith(
+        "data:image/png;base64,"
+      )
+    ) {
+      throw new Error(
+        providerName +
+        " 未回傳有效的去背 PNG"
+      );
+    }
+
+    /* 03｜載入去背圖片 */
+
+    const imageStart = performance.now();
+
+    const image = await loadImageElement(
+      response.image
+    );
+
+    originalCutout = image;
+
+    editCanvas.width = image.naturalWidth;
+    editCanvas.height = image.naturalHeight;
+
+    editCtx.clearRect(
+      0,
+      0,
+      editCanvas.width,
+      editCanvas.height
+    );
+
+    editCtx.drawImage(
+      image,
+      0,
+      0,
+      editCanvas.width,
+      editCanvas.height
+    );
+
+    imageLoadSeconds =
+      (performance.now() - imageStart) / 1000;
+
+    /* 04｜啟用原本手動修圖功能 */
+
+    editReady = true;
+    editMode = "erase";
+
+    setActiveTool();
+
+    editHistory = [];
+    editHistoryIndex = -1;
+
+    saveHistory();
+
+    $("editTools").classList.remove("hidden");
+    button.classList.add("hidden");
+
+    /* 05｜計算耗時 */
+
+    const totalSeconds =
+      (performance.now() - totalStart) / 1000;
+
+    const apiMilliseconds =
+      engine === "removeBackgroundRemoveBgTest"
+        ? (
+            backendTiming?.removeBgApiMs ??
+            backendTiming?.openaiMs ??
+            0
+          )
+        : (
+            backendTiming?.openaiMs ?? 0
+          );
+
+    const apiSeconds =
+      Number(apiMilliseconds) / 1000;
+
+    const backendSeconds =
+      Number(backendTiming?.backendMs || 0) / 1000;
+
+    const bridgeOverheadSeconds =
+      backendTiming
+        ? Math.max(
+            0,
+            bridgeSeconds - backendSeconds
+          )
+        : null;
+
+    const photoTiming =
+      window.mindspacePhotoTiming || {};
+
+    const report = {
+
+      provider: providerName,
+
+      model: response.model || null,
+
+      photoWidth:
+        photoTiming.width || null,
+
+      photoHeight:
+        photoTiming.height || null,
+
+      photoPrepareSeconds: +(
+        (photoTiming.prepareMs || 0) / 1000
+      ).toFixed(3),
+
+      photoKB: Math.round(
+        (photoTiming.approximateBytes || 0) / 1024
+      ),
+
+      bridgeRoundTripSeconds:
+        +bridgeSeconds.toFixed(3),
+
+      backendSeconds:
+        +backendSeconds.toFixed(3),
+
+      apiSeconds:
+        +apiSeconds.toFixed(3),
+
+      bridgeOverheadSeconds:
+        bridgeOverheadSeconds === null
+          ? null
+          : +bridgeOverheadSeconds.toFixed(3),
+
+      imageLoadSeconds:
+        +imageLoadSeconds.toFixed(3),
+
+      totalRemoveBgSeconds:
+        +totalSeconds.toFixed(3)
+    };
+
+    /* 06｜顯示測速報告 */
+
+    console.table(report);
+
+    const timeText = [
+
+      "AI 去背完成！現在可以修正圖片。",
+
+      "",
+
+      "📊 本次去背測速",
+
+      "去背服務：" + providerName,
+
+      "模型：" + (
+        response.model || "未提供"
+      ),
+
+      "圖片尺寸：" +
+        (report.photoWidth || "?") +
+        " × " +
+        (report.photoHeight || "?"),
+
+      "圖片大小：約 " +
+        report.photoKB + " KB",
+
+      "圖片準備：" +
+        report.photoPrepareSeconds + " 秒",
+
+      "Bridge 往返：" +
+        report.bridgeRoundTripSeconds + " 秒",
+
+      providerName + " API：" +
+        (
+          backendTiming
+            ? report.apiSeconds + " 秒"
+            : "未取得後端測速"
+        ),
+
+      "圖片載入：" +
+        report.imageLoadSeconds + " 秒",
+
+      "去背總時間：" +
+        report.totalRemoveBgSeconds + " 秒"
+
+    ].join("\n");
+
+    $("editorMessage").style.whiteSpace =
+      "pre-line";
+
+    $("editorMessage").textContent =
+      timeText;
+
+    console.log(
+      "[Mindspace 雙引擎去背測速]",
+      report
+    );
+
+  } catch (error) {
+
+    const elapsed =
+      (performance.now() - totalStart) / 1000;
+
+    $("editorMessage").textContent =
+      providerName +
+      " 去背未完成：" +
+      error.message +
+      "\n已耗時：" +
+      elapsed.toFixed(2) +
+      " 秒";
+
+    console.error(
+      "[Mindspace 雙引擎去背失敗]",
+      {
+        provider: providerName,
+        error: error.message,
+        elapsedSeconds: elapsed
+      }
+    );
+
+  } finally {
+
+    processing = false;
+
+    button.disabled = false;
+    engineSelect.disabled = false;
+
+    button.textContent = "開始 AI 去背";
+  }
+};
+
+
+
+/* =====================================================
+   07｜手動橡皮擦、恢復、復原
+===================================================== */
+
+function setActiveTool() {
+  $("eraserTool").classList.toggle(
+    "active",
+    editMode === "erase"
+  );
+
+  $("restoreTool").classList.toggle(
+    "active",
+    editMode === "restore"
+  );
+}
+
+$("eraserTool").onclick = () => {
+  editMode = "erase";
+  setActiveTool();
+};
+
+$("restoreTool").onclick = () => {
+  editMode = "restore";
+  setActiveTool();
+};
+
+$("brushSize").oninput = event => {
+  brushSize = Number(event.target.value);
+
+  $("brushSizeValue").textContent =
+    brushSize;
+};
+
+function pointerPosition(event) {
+  const rect =
+    editCanvas.getBoundingClientRect();
+
+  return {
+    x:
+      (event.clientX - rect.left) *
+      editCanvas.width / rect.width,
+
+    y:
+      (event.clientY - rect.top) *
+      editCanvas.height / rect.height
+  };
+}
+
+function paintCircle(x, y) {
+  const radius = brushSize / 2;
+
+  if (editMode === "erase") {
+    editCtx.save();
+
+    editCtx.globalCompositeOperation =
+      "destination-out";
+
+    editCtx.beginPath();
+
+    editCtx.arc(
+      x,
+      y,
+      radius,
+      0,
+      Math.PI * 2
+    );
+
+    editCtx.fill();
+    editCtx.restore();
+
+  } else if (originalCutout) {
+    editCtx.save();
+
+    editCtx.beginPath();
+
+    editCtx.arc(
+      x,
+      y,
+      radius,
+      0,
+      Math.PI * 2
+    );
+
+    editCtx.clip();
+
+    editCtx.drawImage(
+      originalCutout,
+      0,
+      0,
+      editCanvas.width,
+      editCanvas.height
+    );
+
+    editCtx.restore();
+  }
+}
+
+function paintLine(from, to) {
+  const distance = Math.hypot(
+    to.x - from.x,
+    to.y - from.y
+  );
+
+  const steps = Math.max(
+    1,
+    Math.ceil(
+      distance /
+      Math.max(1, brushSize / 5)
+    )
+  );
+
+  for (
+    let i = 0;
+    i <= steps;
+    i++
+  ) {
+    const t = i / steps;
+
+    paintCircle(
+      from.x + (to.x - from.x) * t,
+      from.y + (to.y - from.y) * t
+    );
+  }
+}
+
+editCanvas.addEventListener(
+  "pointerdown",
+  event => {
+    if (!editReady) return;
+
+    event.preventDefault();
+
+    isDrawing = true;
+
+    editCanvas.setPointerCapture(
+      event.pointerId
+    );
+
+    lastPoint =
+      pointerPosition(event);
+
+    paintCircle(
+      lastPoint.x,
+      lastPoint.y
+    );
+  }
+);
+
+editCanvas.addEventListener(
+  "pointermove",
+  event => {
+    if (
+      !isDrawing ||
+      !editReady
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const point =
+      pointerPosition(event);
+
+    paintLine(
+      lastPoint,
+      point
+    );
+
+    lastPoint = point;
+  }
+);
+
+function finishDrawing() {
+  if (!isDrawing) return;
+
+  isDrawing = false;
+  lastPoint = null;
+
+  saveHistory();
+}
+
+editCanvas.addEventListener(
+  "pointerup",
+  finishDrawing
+);
+
+editCanvas.addEventListener(
+  "pointercancel",
+  finishDrawing
+);
+
+editCanvas.addEventListener(
+  "lostpointercapture",
+  finishDrawing
+);
+
+function saveHistory() {
+  if (!editReady) return;
+
+  editHistory = editHistory.slice(
+    0,
+    editHistoryIndex + 1
+  );
+
+  editHistory.push(
+    editCtx.getImageData(
+      0,
+      0,
+      editCanvas.width,
+      editCanvas.height
+    )
+  );
+
+  if (
+    editHistory.length > MAX_HISTORY
+  ) {
+    editHistory.shift();
+  }
+
+  editHistoryIndex =
+    editHistory.length - 1;
+}
+
+function restoreHistory() {
+  if (
+    editHistoryIndex < 0 ||
+    !editHistory[editHistoryIndex]
+  ) {
+    return;
+  }
+
+  editCtx.putImageData(
+    editHistory[editHistoryIndex],
+    0,
+    0
+  );
+}
+
+$("undoEdit").onclick = () => {
+  if (editHistoryIndex <= 0) return;
+
+  editHistoryIndex--;
+  restoreHistory();
+};
+
+$("redoEdit").onclick = () => {
+  if (
+    editHistoryIndex >=
+    editHistory.length - 1
+  ) {
+    return;
+  }
+
+  editHistoryIndex++;
+  restoreHistory();
+};
+
+$("resetEdit").onclick = () => {
+  if (
+    !editReady ||
+    !originalCutout
+  ) {
+    return;
+  }
+
+  editCtx.clearRect(
+    0,
+    0,
+    editCanvas.width,
+    editCanvas.height
+  );
+
+  editCtx.drawImage(
+    originalCutout,
+    0,
+    0,
+    editCanvas.width,
+    editCanvas.height
+  );
+
+  saveHistory();
+};
+
+/* =====================================================
+   08｜原始積木立即進入世界
+===================================================== */
+
+$("saveEditor").onclick = async () => {
+  if (!editReady) return;
+
+  const button = $("saveEditor");
+
+  button.disabled = true;
+
+  try {
+    if (
+      typeof window.addMindspaceCreation !==
+      "function"
+    ) {
+      throw new Error(
+        "sketch.js 尚未載入"
+      );
+    }
+
+    const png =
+      editCanvas.toDataURL("image/png");
+
+    latestCreationId =
+      await window.addMindspaceCreation(png);
+
+    latestCreationImage = png;
+
+    closeModal("editorModal");
+
+    $("sidebar").classList.remove("open");
+
+    currentPhoto = "";
+
+    say(
+      "你的積木已經進入 Mindspace！"
+    );
+
+    selectedType = "";
+    aiSuggestion = null;
+
+    $("classifyCharacter").classList.remove(
+      "selected"
+    );
+
+    $("classifyEnvironment").classList.remove(
+      "selected"
+    );
+
+    $("classificationPreview").src = png;
+
+    $("classificationDescription").value = "";
+
+    $("aiSuggestion").textContent =
+      "你可以描述作品，再讓 AI 提出建議。";
+
+    $("classificationMessage").textContent =
+      "AI 的判斷可以更正，最後由你決定。";
+
+    setVoiceStatus(
+      "按麥克風說出你的想像，或直接輸入文字。"
+    );
+
+    openModal("classificationModal");
+
+    updateCommandSelection();
+
+  } catch (error) {
+    $("editorMessage").textContent =
+      "加入世界失敗：" + error.message;
+
+  } finally {
+    button.disabled = false;
+  }
+};
+
+$("closeEditor").onclick = () => {
+  if (processing) return;
+
+  closeModal("editorModal");
+};
+
+/* =====================================================
+   09｜AI 角色／環境分類
+===================================================== */
+
+function selectCreationType(type) {
+  selectedType = type;
+
+  $("classifyCharacter").classList.toggle(
+    "selected",
+    type === "character"
+  );
+
+  $("classifyEnvironment").classList.toggle(
+    "selected",
+    type === "environment"
+  );
+
+  $("classificationMessage").textContent =
+    type === "character"
+      ? "目前選擇：Character 角色"
+      : "目前選擇：Environment 環境";
+}
+
+$("classifyCharacter").onclick = () => {
+  selectCreationType("character");
+};
+
+$("classifyEnvironment").onclick = () => {
+  selectCreationType("environment");
+};
+
+$("analyzeCreationAI").onclick = async () => {
+  if (
+    analyzing ||
+    !latestCreationImage
+  ) {
+    return;
+  }
+
+  analyzing = true;
+
+  const button = $("analyzeCreationAI");
+
+  button.disabled = true;
+  button.textContent =
+    "OpenAI 正在理解作品……";
+
+  $("aiSuggestion").textContent =
+    "正在分析積木外型與孩子的描述……";
+
+  try {
+    const description =
+      $("classificationDescription")
+        .value.trim();
+
+    const result = await requestAI(
+      "classifyCreationAI",
+      {
+        image: latestCreationImage,
+        description
+      },
+      120000
+    );
+
+    if (
+      !result?.success ||
+      !result.suggestion ||
+      !result.responseId
+    ) {
+      throw new Error(
+        "OpenAI 未回傳有效辨識資料"
+      );
+    }
+
+    aiSuggestion = result.suggestion;
+
+    if (!selectedType) {
+      selectCreationType(
+        aiSuggestion.kind
+      );
+    }
+
+    $("aiSuggestion").textContent =
+      "AI 建議：" +
+      (
+        aiSuggestion.kind === "character"
+          ? "Character 角色"
+          : "Environment 環境"
+      ) +
+      "\n名稱：" +
+      aiSuggestion.name +
+      "\n原因：" +
+      aiSuggestion.reason +
+      "\n\nOpenAI 請求 ID：" +
+      result.responseId;
+
+    $("classificationMessage").textContent =
+      "可以接受 AI 的建議，或點擊另一個類型更正。";
+
+  } catch (error) {
+    aiSuggestion = null;
+
+    $("aiSuggestion").textContent =
+      "AI 辨識失敗：" + error.message;
+
+    $("classificationMessage").textContent =
+      "你仍可以自行選擇角色或環境。";
+
+  } finally {
+    analyzing = false;
+    button.disabled = false;
+
+    button.textContent =
+      "✨ 讓 AI 理解我的作品";
+  }
+};
+
+/* =====================================================
+   10｜確認 AI 分類＋Environment 自動背景
+===================================================== */
+
+
+/* =====================================================
+   10｜確認 AI 分類
+   Character：保留原本角色流程
+   Environment：以孩子原始積木 PNG
+   進行真正的 AI 圖像延伸
+===================================================== */
+/* =====================================================
+   MINDSPACE V6｜漸進式背景合成
+===================================================== */
+
+const mindspaceV6EnvironmentHistory = [];
+
+function mindspaceV6LoadImage(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+
+    img.onload = () => resolve(img);
+
+    img.onerror = () => reject(
+      new Error("V6 圖片載入失敗")
+    );
+
+    img.src = src;
+  });
+}
+
+
+async function mindspaceV6ComposeEnvironment(
+  currentBackground,
+  environmentImage
+) {
+  if (!currentBackground) {
+    // 第一個環境：保留原始積木作為 AI 參考。
+    // 最終大小與色調由 Code.gs 的生成規則控制。
+    return environmentImage;
+  }
+
+  const [backgroundImg, environmentImg] =
+    await Promise.all([
+      mindspaceV6LoadImage(currentBackground),
+      mindspaceV6LoadImage(environmentImage)
+    ]);
+
+  const canvas = document.createElement("canvas");
+  canvas.width = 1536;
+  canvas.height = 1024;
+
+  const ctx = canvas.getContext("2d");
+
+  // 先保留既有背景。
+  const bgScale = Math.max(
+    canvas.width / backgroundImg.width,
+    canvas.height / backgroundImg.height
+  );
+
+  const bgW = backgroundImg.width * bgScale;
+  const bgH = backgroundImg.height * bgScale;
+
+  ctx.drawImage(
+    backgroundImg,
+    (canvas.width - bgW) / 2,
+    (canvas.height - bgH) / 2,
+    bgW,
+    bgH
+  );
+
+  // V6.1：新增環境物件採用較小的參考尺寸。
+  // 這個尺寸只影響送給 AI 的參考圖，
+  // 不會修改孩子原始積木 PNG。
+  const maxObjectSize = 190;
+
+  const scale = Math.min(
+    1,
+    maxObjectSize / environmentImg.width,
+    maxObjectSize / environmentImg.height
+  );
+
+  const w = environmentImg.width * scale;
+  const h = environmentImg.height * scale;
+
+  // 預設放在畫面右下側，作為新增位置參考。
+  const x = canvas.width * 0.73 - w / 2;
+  const y = canvas.height * 0.73 - h / 2;
+
+  // 不添加陰影，避免 AI 將照片的貼圖效果保留下來。
+  ctx.drawImage(
+    environmentImg,
+    x,
+    y,
+    w,
+    h
+  );
+
+  return canvas.toDataURL("image/png");
+}
+
+let environmentExpansionBusy = false;
+
+$("confirmClassification").onclick = async () => {
+  if (analyzing || environmentExpansionBusy) {
+    return;
+  }
+
+  if (!selectedType) {
+    $("classificationMessage").textContent =
+      "請先選擇角色或環境。";
+    return;
+  }
+
+  if (
+    typeof window.applyMindspaceClassification !==
+    "function"
+  ) {
+    $("classificationMessage").textContent =
+      "sketch.js 尚未支援角色／環境分類。";
+    return;
+  }
+
+  const creationId = latestCreationId;
+  const creationImage = latestCreationImage;
+  const creationType = selectedType;
+  const suggestion = aiSuggestion;
+
+  const description =
+    $("classificationDescription")
+      .value.trim();
+
+  const classificationResult =
+    window.applyMindspaceClassification(
+      creationId,
+      creationType,
+      description,
+      suggestion
+    );
+
+  if (classificationResult === false) {
+    $("classificationMessage").textContent =
+      "找不到對應的積木作品。";
+    return;
+  }
+
+  // 原始積木已經在 p5.js 世界中。
+  // 分類完成後直接關閉視窗，
+  // 不等待 OpenAI 圖片生成。
+  stopCreationVoice(true);
+  closeModal("classificationModal");
+  updateCommandSelection();
+
+  if (creationType === "character") {
+    say("你的角色開始探索世界了！");
+    return;
+  }
+
+  // 以下只在 Environment 執行。
+  say(
+    "你的積木環境已經進入世界！" +
+    "現在讓它慢慢延伸成更大的世界！"
+  );
+
+  if (
+    typeof creationImage !== "string" ||
+    !creationImage.startsWith(
+      "data:image/png;base64,"
+    )
+  ) {
+    console.error(
+      "[Mindspace] 缺少去背完成的原始積木 PNG"
+    );
+
+    say(
+      "積木環境已經保留，但找不到可以延伸的圖片。"
+    );
+    return;
+  }
+
+  if (!bridgeReady) {
+    console.error(
+      "[Mindspace] OpenAI Bridge 尚未連線"
+    );
+
+    say(
+      "積木環境已經保留，請等 AI 連線後再試一次。"
+    );
+    return;
+  }
+
+  if (
+    typeof window.setMindspaceAIBackground !==
+    "function"
+  ) {
+    console.error(
+      "[Mindspace] 背景載入模組尚未準備完成"
+    );
+
+    say(
+      "積木環境已經保留，但背景模組尚未準備好。"
+    );
+    return;
+  }
+
+  const environmentData =
+    suggestion?.environment || {};
+
+  const identity = String(
+    suggestion?.identity ||
+    suggestion?.name ||
+    description ||
+    "孩子創造的積木環境"
+  );
+
+  const theme = String(
+    environmentData.theme ||
+    description ||
+    identity
+  );
+
+  const worldType = String(
+    environmentData.worldType ||
+    "fantasy"
+  );
+
+  const elements =
+    Array.isArray(environmentData.sceneElements)
+      ? environmentData.sceneElements
+      : Array.isArray(environmentData.elements)
+        ? environmentData.elements
+        : [];
+
+  environmentExpansionBusy = true;
+
+  console.log(
+    "[Mindspace] 開始真實圖片引導延伸",
+    {
+      creationId,
+      identity,
+      theme,
+      worldType,
+      imageBytesApprox:
+        Math.floor(creationImage.length * 0.75)
+    }
+  );
+
+  try {
+    const currentBackground =
+  window.getMindspaceAIBackgroundImage?.() || "";
+
+const compositeImage =
+  await mindspaceV6ComposeEnvironment(
+    currentBackground,
+    creationImage
+  );
+
+const result = await requestAI(
+  "generateEnvironmentExpansionAI",
+  {
+    image: creationImage,
+    compositeImage: compositeImage,
+    currentBackground: currentBackground
+      ? "existing-background-provided"
+      : "",
+    description,
+    identity,
+    theme,
+    worldType,
+    elements,
+    existingElements:
+      mindspaceV6EnvironmentHistory.slice()
+  },
+  180000
+);
+
+    if (
+      !result ||
+      result.success !== true ||
+      result.provider !== "OpenAI" ||
+      result.imageGuided !== true ||
+      typeof result.image !== "string" ||
+      !result.image.startsWith(
+        "data:image/png;base64,"
+      )
+    ) {
+      throw new Error(
+        "OpenAI 未回傳有效的圖片延伸結果"
+      );
+    }
+
+    const loaded =
+      await window.setMindspaceAIBackground(
+        result.image,
+        theme
+      );
+
+    if (
+      !loaded ||
+      loaded.success !== true
+    ) {
+      throw new Error(
+        loaded?.superseded
+          ? "已有更新的背景取代這次生成"
+          : "AI 背景圖片沒有成功載入"
+      );
+    }
+
+    // AI 背景成功載入後，隱藏原始環境積木照片。
+    // Character 不受影響。
+    const hidden =
+      window.hideMindspaceEnvironmentOriginal?.(
+        creationId
+      );
+mindspaceV6EnvironmentHistory.push(identity);
+    console.log(
+      "[Mindspace] 環境原始照片隱藏結果",
+      {
+        creationId,
+        hidden
+      }
+    );
+
+    console.log(
+      "[Mindspace] Environment 圖像延伸成功",
+      {
+        provider: result.provider,
+        model: result.model,
+        imageGuided: result.imageGuided,
+        loadedWidth: loaded.width,
+        loadedHeight: loaded.height
+      }
+    );
+
+    
+    say(
+      "你的 Plus-Plus 世界已經延伸完成！" +
+      "原本的環境積木已融入背景，" +
+      "角色會繼續在世界中活動！"
+    );
+
+
+  } catch (error) {
+    console.error(
+      "[Mindspace] Environment 圖像延伸失敗",
+      error
+    );
+
+    // 失敗時不清空積木、不替換背景，
+    // 也不使用假的 AI 圖片。
+    say(
+      "你的積木環境已經保留，" +
+      "但這次的背景延伸沒有完成。"
+    );
+
+  } finally {
+    environmentExpansionBusy = false;
+  }
+};
+
+
+$("skipClassification").onclick = () => {
+  if (analyzing) return;
+
+  stopCreationVoice(true);
+
+  closeModal("classificationModal");
+
+  say(
+    "作品已經留在世界中，可以繼續創造！"
+  );
+};
+
+/* =====================================================
+   11｜世界數量
+===================================================== */
+
+window.updateMindspaceCount = count => {
+  $("heroList").textContent =
+    count === 0
+      ? "目前還沒有作品。"
+      : "目前世界中有 " +
+        count +
+        " 個積木作品。";
+};
+
+$("clearWorld").onclick = () => {
+  if (
+    !confirm(
+      "確定要清空所有作品嗎？"
+    )
+  ) {
+    return;
+  }
+
+ window.clearMindspaceWorld?.();
+
+// V6｜清空世界時，同步清除環境歷史紀錄
+mindspaceV6EnvironmentHistory.length = 0;
+
+updateCommandSelection();
+
+  setCommandStatus(
+    "世界已清空，可以開始新的創作。"
+  );
+};
+
+/* =====================================================
+   12｜語音辨識共用設定
+===================================================== */
+
+const SpeechRecognitionClass =
+  window.SpeechRecognition ||
+  window.webkitSpeechRecognition;
+
+let creationRecognition = null;
+let creationListening = false;
+let voiceCancelled = false;
+let voiceError = false;
+
+function setVoiceStatus(message) {
+  $("classificationVoiceStatus").textContent =
+    message;
+}
+
+function updateCreationMicButton() {
+  const button = $("classificationMic");
+
+  button.textContent =
+    creationListening
+      ? "⏹️ 結束說話，交給 AI 理解"
+      : "🎙️ 按這裡，說出你的想像";
+
+  button.setAttribute(
+    "aria-pressed",
+    String(creationListening)
+  );
+
+  button.style.background =
+    creationListening
+      ? "#FFE0D8"
+      : "#E5F1FC";
+}
+
+function stopCreationVoice(
+  cancel = false
+) {
+  if (!creationRecognition) return;
+
+  if (cancel) {
+    voiceCancelled = true;
+    creationRecognition.abort();
+  } else {
+    creationRecognition.stop();
+  }
+}
+
+function startCreationVoice() {
+  if (creationListening) {
+    stopCreationVoice();
+    return;
+  }
+
+  if (!SpeechRecognitionClass) {
+    setVoiceStatus(
+      "瀏覽器不支援語音辨識，請使用 Chrome 或 Edge，或直接輸入文字。"
+    );
+
+    return;
+  }
+
+  if (
+    !latestCreationId ||
+    !latestCreationImage ||
+    analyzing
+  ) {
+    setVoiceStatus(
+      "請先拍照完成去背，並等待目前的辨識結束。"
+    );
+
+    return;
+  }
+
+  const recognition =
+    new SpeechRecognitionClass();
+
+  creationRecognition = recognition;
+
+  voiceCancelled = false;
+  voiceError = false;
+
+  const previous =
+    $("classificationDescription")
+      .value.trim();
+
+  let transcript = "";
+
+  recognition.lang = "zh-TW";
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    creationListening = true;
+
+    updateCreationMicButton();
+
+    setVoiceStatus(
+      "🎙️ 正在聆聽……說出作品是什麼、會做什麼、住在哪裡。"
+    );
+
+    say(
+      "我正在聽你的想像！"
+    );
+  };
+
+  recognition.onresult = event => {
+    let finalText = "";
+    let interimText = "";
+
+    for (
+      let i = 0;
+      i < event.results.length;
+      i++
+    ) {
+      const text =
+        event.results[i][0]?.transcript || "";
+
+      if (event.results[i].isFinal) {
+        finalText += text;
+      } else {
+        interimText += text;
+      }
+    }
+
+    transcript =
+      (finalText + interimText).trim();
+
+    $("classificationDescription").value =
+      [previous, transcript]
+        .filter(Boolean)
+        .join("\n");
+
+    setVoiceStatus(
+      "辨識內容：" + transcript
+    );
+  };
+
+  recognition.onerror = event => {
+    voiceError = true;
+
+    const errors = {
+      "not-allowed":
+        "麥克風權限被拒絕，請允許瀏覽器使用麥克風。",
+      "service-not-allowed":
+        "瀏覽器未允許語音辨識服務。",
+      "no-speech":
+        "沒有聽到聲音，請再試一次。",
+      "audio-capture":
+        "找不到可用的麥克風。",
+      "network":
+        "語音辨識服務無法連線，請檢查網路。"
+    };
+
+    setVoiceStatus(
+      errors[event.error] ||
+      "語音辨識失敗：" + event.error
+    );
+  };
+
+  recognition.onend = () => {
+    creationListening = false;
+    creationRecognition = null;
+
+    updateCreationMicButton();
+
+    if (
+      voiceCancelled ||
+      voiceError
+    ) {
+      return;
+    }
+
+    if (!transcript.trim()) {
+      setVoiceStatus(
+        "沒有取得語音內容，請再試一次。"
+      );
+
+      return;
+    }
+
+    setVoiceStatus(
+      "語音完成，正在交給 OpenAI 理解作品……"
+    );
+
+    $("analyzeCreationAI").click();
+  };
+
+  try {
+    recognition.start();
+  } catch (error) {
+    creationListening = false;
+    creationRecognition = null;
+
+    updateCreationMicButton();
+
+    setVoiceStatus(
+      "無法啟動語音辨識：" +
+      error.message
+    );
+  }
+}
+
+$("classificationMic").onclick =
+  startCreationVoice;
+
+/* =====================================================
+   13｜角色選取資訊
+===================================================== */
+
+function getSelectedMindspaceItem() {
+  if (
+    typeof window.getSelectedMindspaceCreation ===
+    "function"
+  ) {
+    return window.getSelectedMindspaceCreation();
+  }
+
+  const id = window.mindspaceSelectedId;
+
+  return (
+    window.mindspaceCreations || []
+  ).find(item => item.id === id) || null;
+}
+
+function updateCommandSelection() {
+  const item = getSelectedMindspaceItem();
+  const element = $("mindspaceCommandSelection");
+
+  if (!item) {
+    element.textContent =
+      "🎯 請先選取世界中的角色";
+    return;
+  }
+
+  const name =
+    item.name ||
+    item.identity ||
+    item.description ||
+    "我的積木作品";
+
+  element.textContent =
+    "🎯 目前選取：" + name;
+}
+
+window.addEventListener(
+  "mindspace:selection",
+  updateCommandSelection
+);
+
+/* =====================================================
+   14｜AI 指令狀態
+===================================================== */
+
+let mindspaceCommandBusy = false;
+
+function setCommandStatus(message, kind = "") {
+  const element = $("mindspaceCommandStatus");
+  element.textContent = message;
+  element.className = kind;
+}
+
+function setCommandBusy(value) {
+  mindspaceCommandBusy = value;
+
+  $("mindspaceCommandSend").disabled = value;
+  $("micButton").disabled = value;
+
+  $("mindspaceCommandSend").textContent =
+    value
+      ? "✨ OpenAI 正在理解與創造……"
+      : "✨ 讓我的想像成真";
+}
+
+function beginMindspaceCommand() {
+  window.startMindspaceCommand?.();
+}
+
+function finishMindspaceCommand() {
+  window.finishMindspaceCommand?.();
+}
+
+/* =====================================================
+   15｜取得世界資訊
+===================================================== */
+
+function getMindspaceContext() {
+  if (
+    typeof window.getMindspaceWorldState ===
+    "function"
+  ) {
+    return window.getMindspaceWorldState();
+  }
+
+  const creations = (
+    window.mindspaceCreations || []
+  ).map(item => ({
+    id: item.id,
+    kind: item.kind,
+    name: item.name || "",
+    identity: item.identity || "",
+    description: item.description || "",
+    movement: item.movement || "float",
+    abilities: item.abilities || [],
+    worldType: item.worldType || ""
+  }));
+
+  const worlds = (
+    window.mindspaceWorldZones || []
+  ).map(zone => ({
+    id: zone.id,
+    type: zone.type,
+    elements: zone.elements || []
+  }));
+
+  return { creations, worlds };
+}
+
+/* =====================================================
+   16｜真實 OpenAI 指令
+===================================================== */
+
+async function submitMindspaceCommand(inputText) {
+  if (mindspaceCommandBusy) return;
+
+  const text = String(inputText || "").trim();
+
+  if (!text) {
+    setCommandStatus(
+      "請先輸入想像內容，或使用麥克風說話。",
+      "error"
+    );
+    return;
+  }
+
+  if (!bridgeReady) {
+    setCommandStatus(
+      "OpenAI Bridge 尚未連線，請稍候或重新連接。",
+      "error"
+    );
+    return;
+  }
+
+  const context = getMindspaceContext();
+
+  if (
+    !Array.isArray(context.creations) ||
+    context.creations.length === 0
+  ) {
+    setCommandStatus(
+      "世界裡還沒有積木作品，請先拍照創造。",
+      "error"
+    );
+    return;
+  }
+
+  const selected = getSelectedMindspaceItem();
+  const targetId = selected?.id || null;
+
+  setCommandBusy(true);
+  beginMindspaceCommand();
+
+  setCommandStatus(
+    "正在把你的想像傳給 OpenAI……"
+  );
+
+  say("我正在理解你的想像！");
+
+  try {
+    const result = await requestAI(
+      "interpretVoiceCommandAI",
+      {
+        text,
+        targetId,
+        context
+      },
+      120000
+    );
+
+    if (
+      !result ||
+      result.success !== true ||
+      !result.responseId
+    ) {
+      throw new Error(
+        result?.error ||
+        "OpenAI 未回傳可驗證的指令結果"
+      );
+    }
+
+    if (result.needsClarification) {
+      const reply =
+        result.reply ||
+        "請告訴我你想修改哪個角色。";
+
+      setCommandStatus(reply);
+      say(reply);
+      return;
+    }
+
+    const operations =
+      Array.isArray(result.operations)
+        ? result.operations
+        : [];
+
+    if (operations.length === 0) {
+      const reply =
+        result.reply ||
+        "AI 已經理解，但沒有產生需要執行的變化。";
+
+      setCommandStatus(reply);
+      say(reply);
+      return;
+    }
+
+    if (
+      typeof window.applyMindspaceAIOperations !==
+      "function"
+    ) {
+      throw new Error(
+        "sketch.js 的 AI 指令執行器尚未載入。"
+      );
+    }
+
+    const execution =
+      await window.applyMindspaceAIOperations(
+        operations
+      );
+
+    
+console.log(
+  "[Mindspace] AI 指令實際執行結果",
+  execution
+);
+
+if (
+  execution === false ||
+  execution?.success === false ||
+  (
+    typeof execution?.applied === "number" &&
+    execution.applied === 0
+  )
+) {
+  const details =
+    Array.isArray(execution?.errors)
+      ? execution.errors.filter(Boolean).join("；")
+      : "";
+
+  throw new Error(
+    details ||
+    "OpenAI 已回覆，但角色變化未成功套用。"
+  );
+}
+
+
+    const reply =
+      result.reply ||
+      "你的想像已經進入 Mindspace！";
+
+    setCommandStatus(reply, "success");
+    say(reply);
+
+    $("chatInput").value = "";
+    updateCommandSelection();
+
+  } catch (error) {
+    const message =
+      error?.message || String(error);
+
+    setCommandStatus(
+      "指令沒有完成：" + message,
+      "error"
+    );
+
+    say("這次沒有成功，請再試一次。");
+
+  } finally {
+    setCommandBusy(false);
+    finishMindspaceCommand();
+  }
+}
+
+/* =====================================================
+   17｜文字輸入與送出
+===================================================== */
+
+$("mindspaceCommandSend").onclick = () => {
+window.submitMindspaceCommand(
+    $("chatInput").value
+  );
+};
+
+$("chatInput").addEventListener(
+  "keydown",
+  event => {
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey &&
+      !event.isComposing
+    ) {
+      event.preventDefault();
+
+      window.submitMindspaceCommand(
+        $("chatInput").value
+      );
+    }
+  }
+);
+
+/* =====================================================
+   18｜自由創作語音
+===================================================== */
+
+let commandRecognition = null;
+let commandListening = false;
+let commandVoiceError = false;
+let commandVoiceCancelled = false;
+
+function updateCommandMicButtons() {
+  $("micButton").textContent =
+    commandListening
+      ? "⏹️ 結束說話"
+      : "🎙️ 說出我的想像";
+
+  $("bubbleMic").textContent =
+    commandListening
+      ? "⏹️"
+      : "🎙️";
+
+  $("bubbleMic").classList.toggle(
+    "listening",
+    commandListening
+  );
+
+  $("micButton").setAttribute(
+    "aria-pressed",
+    String(commandListening)
+  );
+}
+
+function stopCommandVoice(cancel = false) {
+  if (!commandRecognition) return;
+
+  if (cancel) {
+    commandVoiceCancelled = true;
+    commandRecognition.abort();
+  } else {
+    commandRecognition.stop();
+  }
+}
+
+function startCommandVoice() {
+  if (commandListening) {
+    stopCommandVoice();
+    return;
+  }
+
+  if (mindspaceCommandBusy) return;
+
+  if (!SpeechRecognitionClass) {
+    setCommandStatus(
+      "目前瀏覽器不支援語音辨識，請使用 Chrome、Edge 或文字輸入。",
+      "error"
+    );
+    return;
+  }
+
+  if (
+    !(window.mindspaceCreations || []).length
+  ) {
+    setCommandStatus(
+      "請先拍照創造積木作品。",
+      "error"
+    );
+    return;
+  }
+
+  const recognition =
+    new SpeechRecognitionClass();
+
+  commandRecognition = recognition;
+  commandVoiceError = false;
+  commandVoiceCancelled = false;
+
+  const previous =
+    $("chatInput").value.trim();
+
+  let transcript = "";
+
+  recognition.lang = "zh-TW";
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    commandListening = true;
+    updateCommandMicButtons();
+    beginMindspaceCommand();
+
+    setCommandStatus(
+      "🎙️ 正在聆聽你的想像……"
+    );
+
+    say("我正在聽你的想像！");
+  };
+
+  recognition.onresult = event => {
+    let finalText = "";
+    let interimText = "";
+
+    for (
+      let i = 0;
+      i < event.results.length;
+      i++
+    ) {
+      const recognized =
+        event.results[i][0]?.transcript || "";
+
+      if (event.results[i].isFinal) {
+        finalText += recognized;
+      } else {
+        interimText += recognized;
+      }
+    }
+
+    transcript =
+      (finalText + interimText).trim();
+
+    $("chatInput").value =
+      [previous, transcript]
+        .filter(Boolean)
+        .join("\n");
+
+    setCommandStatus(
+      "🎙️ 聽到：" + transcript
+    );
+  };
+
+  recognition.onerror = event => {
+    commandVoiceError = true;
+
+    const messages = {
+      "not-allowed":
+        "麥克風權限被拒絕，請允許瀏覽器使用麥克風。",
+      "service-not-allowed":
+        "瀏覽器未允許語音辨識服務。",
+      "no-speech":
+        "沒有聽到聲音，請再試一次。",
+      "audio-capture":
+        "找不到可用的麥克風。",
+      "network":
+        "語音辨識服務無法連線，請檢查網路。"
+    };
+
+    setCommandStatus(
+      messages[event.error] ||
+      "語音辨識失敗：" + event.error,
+      "error"
+    );
+  };
+
+  recognition.onend = () => {
+    commandListening = false;
+    commandRecognition = null;
+
+    updateCommandMicButtons();
+
+    if (
+      commandVoiceCancelled ||
+      commandVoiceError
+    ) {
+      finishMindspaceCommand();
+      return;
+    }
+
+    if (!transcript.trim()) {
+      setCommandStatus(
+        "沒有取得語音內容，請再說一次。",
+        "error"
+      );
+
+      finishMindspaceCommand();
+      return;
+    }
+
+    window.submitMindspaceCommand(
+      $("chatInput").value
+    );
+  };
+
+  try {
+    recognition.start();
+
+  } catch (error) {
+    commandRecognition = null;
+    commandListening = false;
+
+    updateCommandMicButtons();
+    finishMindspaceCommand();
+
+    setCommandStatus(
+      "無法啟動麥克風：" +
+      error.message,
+      "error"
+    );
+  }
+}
+
+/* =====================================================
+   19｜工作台與泡泡麥克風
+===================================================== */
+
+$("micButton").onclick =
+  startCommandVoice;
+
+$("bubbleMic").onclick = () => {
+  const classificationOpen =
+    !$("classificationModal")
+      .classList.contains("hidden");
+
+  if (classificationOpen) {
+    startCreationVoice();
+    return;
+  }
+
+  // 不開啟工作台，直接聆聽孩子的指令
+  updateCommandSelection();
+  startCommandVoice();
+};
+
+/* =====================================================
+   20｜初始化
+===================================================== */
+
+updateCommandMicButtons();
+updateCreationMicButton();
+updateCommandSelection();
+
+connectBridge();
+
+/* =====================================================
+   21｜AI 滿版背景生成控制
+===================================================== */
+
+(function () {
+  "use strict";
+
+  let backgroundBusy = false;
+
+  const panel =
+    document.getElementById(
+      "mindspaceCommandPanel"
+    );
+
+  if (!panel) {
+    console.error(
+      "[Mindspace] 找不到 STEP 06"
+    );
+    return;
+  }
+
+  const section =
+    document.createElement("div");
+
+  section.id = "mindspaceBackgroundPanel";
+
+  section.style.cssText = [
+    "margin-top:20px",
+    "padding-top:18px",
+    "border-top:1px solid #e1e8f0"
+  ].join(";");
+
+  section.innerHTML = `
+    <h2>🌈 AI 想像世界背景</h2>
+
+    <p class="muted">
+      告訴 AI 你想創造什麼世界。
+      原本的積木角色不會消失。
+    </p>
+
+    <textarea
+      id="mindspaceBackgroundInput"
+      class="field"
+      rows="3"
+      placeholder="例如：紫色天空中的糖果森林，有彩虹瀑布和漂浮的積木城堡"
+    ></textarea>
+
+    <button
+      id="mindspaceGenerateBackground"
+      class="action primary"
+      type="button"
+    >
+      ✨ 生成我的想像世界
+    </button>
+
+    <button
+      id="mindspaceRestoreBackground"
+      class="action"
+      type="button"
+    >
+      ↶ 顯示原本的積木世界
+    </button>
+
+    <div
+      id="mindspaceBackgroundStatus"
+      aria-live="polite"
+      style="
+        padding:12px;
+        border-radius:12px;
+        background:#f1f5f9;
+        font-size:13px;
+        line-height:1.7;
+        margin-top:10px;
+        overflow-wrap:anywhere;
+      "
+    >
+      等待你的世界描述。
+    </div>
+  `;
+
+  panel.appendChild(section);
+
+  const input =
+    document.getElementById(
+      "mindspaceBackgroundInput"
+    );
+
+  const generateButton =
+    document.getElementById(
+      "mindspaceGenerateBackground"
+    );
+
+  const restoreButton =
+    document.getElementById(
+      "mindspaceRestoreBackground"
+    );
+
+  const status =
+    document.getElementById(
+      "mindspaceBackgroundStatus"
+    );
+
+  function updateStatus(
+    message,
+    error = false
+  ) {
+    status.textContent = message;
+
+    status.style.background =
+      error ? "#fff0ec" : "#f1f5f9";
+
+    status.style.color =
+      error ? "#a2382c" : "#25374e";
+  }
+
+  async function generateBackground(description) {
+    const text =
+      String(description || "").trim();
+
+    if (!text) {
+      updateStatus(
+        "請先描述你想要的世界。",
+        true
+      );
+      return false;
+    }
+
+    if (backgroundBusy) {
+      updateStatus(
+        "另一個背景正在生成，請稍候。"
+      );
+      return false;
+    }
+
+    if (!bridgeReady) {
+      updateStatus(
+        "OpenAI Bridge 尚未連線，請稍候。",
+        true
+      );
+      return false;
+    }
+
+    if (
+      typeof window.setMindspaceAIBackground !==
+      "function"
+    ) {
+      updateStatus(
+        "sketch.js 的背景模組尚未載入。",
+        true
+      );
+      return false;
+    }
+
+    backgroundBusy = true;
+    generateButton.disabled = true;
+
+    updateStatus(
+      "正在請 OpenAI 生成 Plus-Plus 想像世界，請稍候……"
+    );
+
+    try {
+      const currentBackground =
+  window.getMindspaceAIBackgroundImage?.() || "";
+
+const result = await requestAI(
+  "generateWorldBackgroundAI",
+  {
+    description: text,
+    theme: text,
+    worldType: "fantasy",
+    elements: [],
+    currentBackground: currentBackground
+  },
+  180000
+);
+
+      if (
+        !result ||
+        result.success !== true ||
+        result.provider !== "OpenAI" ||
+        typeof result.image !== "string" ||
+        !result.image.startsWith(
+          "data:image/png;base64,"
+        )
+      ) {
+        throw new Error(
+          "OpenAI 沒有回傳有效的背景 PNG"
+        );
+      }
+
+      updateStatus(
+        "AI 已生成圖片，正在載入互動世界……"
+      );
+
+      const loaded =
+        await window.setMindspaceAIBackground(
+          result.image,
+          text
+        );
+
+      if (!loaded || !loaded.success) {
+        throw new Error(
+          "背景圖片沒有成功顯示"
+        );
+      }
+
+      updateStatus(
+        "✨ 你的想像世界已經生成！\n" +
+        "原本的積木角色會繼續生活在世界裡。"
+      );
+
+      return true;
+
+    } catch (error) {
+      const message =
+        error?.message || String(error);
+
+      console.error(
+        "[Mindspace] AI 背景生成失敗",
+        error
+      );
+
+      updateStatus(
+        "背景生成失敗：" + message,
+        true
+      );
+
+      return false;
+
+    } finally {
+      backgroundBusy = false;
+      generateButton.disabled = false;
+    }
+  }
+
+  generateButton.addEventListener(
+    "click",
+    () => {
+      generateBackground(input.value);
+    }
+  );
+
+  restoreButton.addEventListener(
+    "click",
+    () => {
+      if (
+        typeof window.disableMindspaceAIBackground ===
+        "function"
+      ) {
+        window.disableMindspaceAIBackground();
+
+        updateStatus(
+          "已切換回原本的積木世界。"
+        );
+      }
+    }
+  );
+
+  window.generateMindspaceWorldAI =
+    generateBackground;
+
+  console.log(
+    "[Mindspace] AI 背景生成控制已載入"
+  );
+})();
+
+/* =====================================================
+   22｜全螢幕泡泡按鈕
+===================================================== */
+
+(function () {
+  "use strict";
+
+  const button =
+    document.getElementById(
+      "bubbleFullscreen"
+    );
+
+  if (!button) {
+    console.error(
+      "[Mindspace] 找不到全螢幕泡泡按鈕"
+    );
+    return;
+  }
+
+  function updateFullscreenButton() {
+    const isFullscreen =
+      !!document.fullscreenElement;
+
+    button.textContent =
+      isFullscreen ? "⤢" : "⛶";
+
+    button.title =
+      isFullscreen
+        ? "離開全螢幕"
+        : "進入全螢幕";
+
+    button.setAttribute(
+      "aria-label",
+      button.title
+    );
+
+    button.setAttribute(
+      "aria-pressed",
+      String(isFullscreen)
+    );
+  }
+
+  button.addEventListener(
+    "click",
+    async function () {
+      try {
+        if (document.fullscreenElement) {
+          await document.exitFullscreen();
+        } else {
+          await document.documentElement
+            .requestFullscreen();
+        }
+
+      } catch (error) {
+        console.error(
+          "[Mindspace] 全螢幕切換失敗",
+          error
+        );
+
+        say(
+          "無法切換全螢幕，請確認瀏覽器權限。"
+        );
+      }
+    }
+  );
+
+  document.addEventListener(
+    "fullscreenchange",
+    updateFullscreenButton
+  );
+
+  updateFullscreenButton();
+})();
+
+</script>
+
+<script src="./sketch.js"></script>
+
+<script>
+/* =====================================================
+   MINDSPACE｜CONTINUOUS AI VOICE GUIDE V2
+
+   按一次啟動 → 持續自動引導
+   兒童探索 / 長輩陪伴
+   真實 OpenAI + 瀏覽器語音朗讀
+
+   自動觸發：
+   1. 首次啟動
+   2. 新作品加入世界
+   3. AI 角色操作成功
+   4. 長時間沒有操作
+
+   安全機制：
+   - 不會一直重複說話
+   - 不在拍照、修圖、分類時插話
+   - 不在麥克風聆聽時插話
+   - 可隨時停止
+   - 不使用假的 AI 回覆
+===================================================== */
+
+(function () {
+  "use strict";
+
+  // 防止重複載入
+  if (window.mindspaceContinuousGuide) {
+    console.warn(
+      "[Mindspace] 持續引導已經載入"
+    );
+    return;
+  }
+
+  const CONFIG = {
+    idleMs: 90000,
+    cooldownMs: 60000,
+    checkMs: 4000,
+    afterActionMs: 2500
+  };
+
+  const state = {
+    enabled: false,
+    mode: "child",
+    requesting: false,
+    speaking: false,
+    generation: 0,
+    lastInteraction: Date.now(),
+    lastGuide: 0,
+    lastCreationCount: 0,
+    pendingEvent: null,
+    pendingTimer: null,
+    lastAIEvent: 0
+  };
+
+  /* ================================
+     01｜建立操作面板
+  ================================= */
+
+  /* ================================
+     01｜AI 懸浮泡泡按鈕
+     不遮擋 Mindspace 世界
+  ================================= */
+
+  const panel = document.createElement("div");
+
+  panel.id = "mindspaceVoiceGuide";
+
+  panel.style.cssText = `
+    position: fixed;
+    right: 20px;
+    bottom: 350px;
+    z-index: 9998;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    width: 60px;
+    font-family: Arial, sans-serif;
+    pointer-events: none;
+  `;
+
+  panel.innerHTML = `
+    <button
+      id="mindspaceGuideStart"
+      type="button"
+      title="點擊啟動或停止 AI 引導；長按切換模式"
+      aria-label="啟動 AI 持續語音引導"
+      aria-pressed="false"
+      style="
+        width:60px;
+        height:60px;
+        border-radius:50%;
+        border:0;
+        background:white;
+        color:#25374e;
+        font-size:27px;
+        cursor:pointer;
+        box-shadow:0 5px 20px rgba(0,0,0,.2);
+        pointer-events:auto;
+        transition:background .2s,transform .2s;
+      "
+    >✨</button>
+
+    <span
+      id="mindspaceGuideStatus"
+      aria-live="polite"
+      style="
+        font-size:11px;
+        font-weight:600;
+        color:white;
+        text-shadow:0 1px 5px rgba(0,0,0,.65);
+        white-space:nowrap;
+        pointer-events:none;
+      "
+    >AI 引導</span>
+
+    <select
+      id="mindspaceGuideMode"
+      aria-label="AI 引導模式"
+      style="
+        display:none;
+        position:absolute;
+        right:65px;
+        top:12px;
+        width:125px;
+        padding:9px;
+        border-radius:10px;
+        background:white;
+        box-shadow:0 4px 16px rgba(0,0,0,.15);
+        pointer-events:auto;
+      "
+    >
+      <option value="child">兒童探索</option>
+      <option value="elder">長輩陪伴</option>
+    </select>
+
+    <button
+      id="mindspaceGuideStop"
+      type="button"
+      style="display:none"
+    >停止</button>
+  `;
+
+  document.body.appendChild(panel);
+
+  const modeSelect =
+    document.getElementById(
+      "mindspaceGuideMode"
+    );
+
+  const startButton =
+    document.getElementById(
+      "mindspaceGuideStart"
+    );
+
+  const stopButton =
+    document.getElementById(
+      "mindspaceGuideStop"
+    );
+
+  const statusElement =
+    document.getElementById(
+      "mindspaceGuideStatus"
+    );
+
+  function status(message) {
+    if (!state.enabled) {
+      statusElement.textContent = "AI 引導";
+      return;
+    }
+
+    if (
+      message.includes("思考") ||
+      message.includes("等待")
+    ) {
+      statusElement.textContent = "AI 思考中";
+    } else if (
+      message.includes("正在陪伴")
+    ) {
+      statusElement.textContent = "AI 說話中";
+    } else {
+      statusElement.textContent = "AI 已開啟";
+    }
+
+    startButton.title = message;
+  }
+
+  // 點一下：啟動或停止持續引導
+  // 長按：顯示兒童／長輩模式選單
+
+  let longPressTimer = null;
+  let longPressed = false;
+
+  startButton.addEventListener(
+    "pointerdown",
+    () => {
+      longPressed = false;
+
+      clearTimeout(longPressTimer);
+
+      longPressTimer = setTimeout(() => {
+        longPressed = true;
+
+        modeSelect.style.display =
+          modeSelect.style.display === "none"
+            ? "block"
+            : "none";
+      }, 650);
+    }
+  );
+
+  ["pointerup", "pointercancel", "pointerleave"]
+    .forEach(name => {
+      startButton.addEventListener(
+        name,
+        () => clearTimeout(longPressTimer)
+      );
+    });
+
+  
+
+  modeSelect.addEventListener(
+    "change",
+    () => {
+      state.mode = modeSelect.value;
+
+      modeSelect.style.display = "none";
+
+      if (state.enabled) {
+        status("AI 持續引導中");
+      }
+    }
+  );
+
+  // 按鈕狀態同步
+  function updateGuideBubble() {
+    const enabled = state.enabled;
+
+    startButton.style.background =
+      enabled ? "#ffcf5d" : "white";
+
+    startButton.style.transform =
+      enabled ? "scale(1.06)" : "scale(1)";
+
+    startButton.setAttribute(
+      "aria-pressed",
+      String(enabled)
+    );
+
+    startButton.setAttribute(
+      "aria-label",
+      enabled
+        ? "停止 AI 持續語音引導"
+        : "啟動 AI 持續語音引導"
+    );
+
+    startButton.disabled = false;
+
+    startButton.textContent =
+      enabled ? "💬" : "✨";
+
+    statusElement.textContent =
+      enabled ? "AI 已開啟" : "AI 引導";
+  }
+
+  function getCreations() {
+    return Array.isArray(
+      window.mindspaceCreations
+    )
+      ? window.mindspaceCreations
+      : [];
+  }
+
+  state.lastCreationCount =
+    getCreations().length;
+
+  /* ================================
+     02｜判斷是否適合說話
+  ================================= */
+
+  function isBusy() {
+    const modalOpen = [
+      "cameraModal",
+      "editorModal",
+      "classificationModal"
+    ].some(id => {
+      const element =
+        document.getElementById(id);
+
+      return element &&
+        !element.classList.contains(
+          "hidden"
+        );
+    });
+
+    const listening =
+      (
+        typeof creationListening !==
+        "undefined" &&
+        creationListening
+      ) ||
+      (
+        typeof commandListening !==
+        "undefined" &&
+        commandListening
+      );
+
+    const processingNow =
+      (
+        typeof processing !== "undefined" &&
+        processing
+      ) ||
+      (
+        typeof analyzing !== "undefined" &&
+        analyzing
+      ) ||
+      (
+        typeof environmentExpansionBusy !==
+        "undefined" &&
+        environmentExpansionBusy
+      );
+
+    const active =
+      document.activeElement;
+
+    const typing =
+      active &&
+      (
+        active.tagName === "TEXTAREA" ||
+        (
+          active.tagName === "INPUT" &&
+          active.type !== "checkbox"
+        )
+      );
+
+    return Boolean(
+      modalOpen ||
+      listening ||
+      processingNow ||
+      typing ||
+      state.requesting ||
+      state.speaking
+    );
+  }
+
+  function markInteraction() {
+    state.lastInteraction = Date.now();
+  }
+
+  /* ================================
+     03｜語音播放
+  ================================= */
+
+  function stopSpeech() {
+    state.generation++;
+
+    if (state.pendingTimer) {
+      clearTimeout(state.pendingTimer);
+      state.pendingTimer = null;
+    }
+
+    state.pendingEvent = null;
+    state.speaking = false;
+
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  }
+
+  function speakGuide(text) {
+    return new Promise(resolve => {
+      if (!text) {
+        resolve();
+        return;
+      }
+
+      if (typeof say === "function") {
+        say(text);
+      }
+
+      if (
+        !("speechSynthesis" in window)
+      ) {
+        status(text);
+        resolve();
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+
+      const utterance =
+        new SpeechSynthesisUtterance(text);
+
+      utterance.lang = "zh-TW";
+
+      utterance.rate =
+        state.mode === "elder"
+          ? 0.78
+          : 0.94;
+
+      utterance.pitch =
+        state.mode === "elder"
+          ? 1
+          : 1.08;
+
+      utterance.volume = 1;
+
+      const voices =
+        window.speechSynthesis.getVoices();
+
+      const voice = voices.find(
+        v =>
+          v.lang.toLowerCase() === "zh-tw"
+      );
+
+      if (voice) {
+        utterance.voice = voice;
+      }
+
+      state.speaking = true;
+
+      status("🔊 AI 正在陪伴引導");
+
+      let finished = false;
+
+      function finish() {
+        if (finished) return;
+        finished = true;
+
+        state.speaking = false;
+        state.lastInteraction = Date.now();
+
+        if (state.enabled) {
+          status(
+            "🟢 AI 持續引導中，等待下一個互動情境"
+          );
+        }
+
+        resolve();
+      }
+
+      utterance.onend = finish;
+      utterance.onerror = finish;
+
+      window.speechSynthesis.speak(
+        utterance
+      );
+    });
+  }
+
+  /* ================================
+     04｜建立真正 AI 引導提示
+  ================================= */
+
+  function buildPrompt(eventName) {
+    const creations =
+      getCreations();
+
+    const recentCreations =
+      creations.slice(-6).map(item => ({
+        name: item.name || "",
+        identity: item.identity || "",
+        kind: item.kind || ""
+      }));
+
+    const audience =
+      state.mode === "elder"
+        ? `
+使用者為長輩。
+
+請用尊重、清楚、自然的語氣。
+不要幼稚化長輩。
+一次只提供一個簡單線索。
+讓使用者自行決定創作方向。
+`
+        : `
+使用者為兒童。
+
+請用有趣、自然、簡短的語氣。
+鼓勵孩子想像與探索。
+不要直接給出標準答案。
+不要替孩子決定角色身分。
+`;
+
+    const eventDescriptions = {
+      welcome:
+        "使用者剛啟動 AI 陪伴，請自然歡迎並引導自由創作。",
+
+      created:
+        "使用者剛將新的積木作品加入世界，請鼓勵他繼續探索。",
+
+      transformed:
+        "使用者剛成功執行一項 AI 角色操作，請提出一個新的探索方向。不要假設具體變身外型。",
+
+      idle:
+        "使用者一段時間沒有操作，請輕柔提供一個新的探索線索，不要催促。"
+    };
+
+    return `
+你是 Mindspace 心智小宇宙的 AI 創作陪伴者。
+
+你的核心原則：
+給予方法，不給予固定答案。
+
+使用者是創作者。
+AI 只能引導、陪伴、提供線索。
+
+${audience}
+
+Mindspace 的互動方式：
+1. 自由拼接 Plus-Plus 積木。
+2. 拍照並使用 AI 去背。
+3. 手動修整積木圖片。
+4. 積木進入數位世界。
+5. 選擇角色或環境。
+6. 透過語音創造能力、故事及變化。
+
+目前情境：
+${eventDescriptions[eventName] || eventName}
+
+目前作品數量：
+${creations.length}
+
+近期作品：
+${JSON.stringify(recentCreations)}
+
+重要限制：
+不要假裝看見未提供的畫面。
+不要聲稱已經執行尚未完成的操作。
+不要連續提出多個問題。
+不要使用 Markdown。
+不要給固定答案。
+
+請只回覆一句自然的繁體中文。
+最多 55 個中文字。
+`;
+  }
+
+  /* ================================
+     05｜呼叫真實 OpenAI
+  ================================= */
+
+  async function generateGuide(
+    eventName,
+    force = false
+  ) {
+    if (!state.enabled) return false;
+
+    if (isBusy()) return false;
+
+    const now = Date.now();
+
+    if (
+      !force &&
+      now - state.lastGuide <
+      CONFIG.cooldownMs
+    ) {
+      return false;
+    }
+
+    if (
+      typeof requestAI !== "function" ||
+      typeof bridgeReady === "undefined" ||
+      !bridgeReady
+    ) {
+      status(
+        "等待 OpenAI Bridge 連線"
+      );
+
+      return false;
+    }
+
+    const generation =
+      ++state.generation;
+
+    state.requesting = true;
+
+    status(
+      "✨ OpenAI 正在思考引導內容"
+    );
+
+    try {
+      const result = await requestAI(
+        "testMessage",
+        {
+          message: buildPrompt(
+            eventName
+          )
+        },
+        60000
+      );
+
+      if (
+        !state.enabled ||
+        generation !== state.generation
+      ) {
+        return false;
+      }
+
+      if (
+        !result ||
+        result.provider !== "OpenAI" ||
+        !result.responseId ||
+        typeof result.text !== "string" ||
+        !result.text.trim()
+      ) {
+        throw new Error(
+          "OpenAI 沒有回傳有效內容"
+        );
+      }
+
+      const text =
+        result.text.trim().slice(0, 180);
+
+      state.lastGuide = Date.now();
+
+      console.log(
+        "[Mindspace] 真實 OpenAI 引導",
+        {
+          event: eventName,
+          responseId: result.responseId,
+          model: result.model,
+          text
+        }
+      );
+
+      state.requesting = false;
+
+      if (
+        !state.enabled ||
+        generation !== state.generation
+      ) {
+        return false;
+      }
+
+      await speakGuide(text);
+
+      return true;
+
+    } catch (error) {
+      console.error(
+        "[Mindspace] AI 引導失敗",
+        error
+      );
+
+      if (
+        generation === state.generation
+      ) {
+        status(
+          "AI 暫時無法回應，創作仍可繼續"
+        );
+      }
+
+      return false;
+
+    } finally {
+      state.requesting = false;
+    }
+  }
+
+  /* ================================
+     06｜排程下一次引導
+  ================================= */
+
+  function scheduleGuide(eventName) {
+    if (!state.enabled) return;
+
+    state.pendingEvent = eventName;
+
+    if (state.pendingTimer) {
+      clearTimeout(state.pendingTimer);
+    }
+
+    state.pendingTimer = setTimeout(
+      () => {
+        state.pendingTimer = null;
+
+        const event =
+          state.pendingEvent;
+
+        state.pendingEvent = null;
+
+        if (!state.enabled) return;
+
+        if (
+          isBusy() ||
+          Date.now() - state.lastGuide <
+          CONFIG.cooldownMs
+        ) {
+          // 等待適合的時機再回應
+          state.pendingEvent = event;
+          return;
+        }
+
+        generateGuide(event);
+      },
+      CONFIG.afterActionMs
+    );
+  }
+
+  /* ================================
+     07｜啟動／停止
+  ================================= */
+
+ 
+  /* ================================
+     07｜泡泡按鈕啟動／停止
+  ================================= */
+
+  startButton.onclick = () => {
+    if (state.enabled) return;
+
+    state.mode = modeSelect.value;
+    state.enabled = true;
+
+    state.lastInteraction = Date.now();
+    state.lastCreationCount =
+      getCreations().length;
+
+    modeSelect.style.display = "none";
+
+    updateGuideBubble();
+
+    status("AI 持續引導中");
+
+    // 第一次點擊立即生成歡迎引導
+    generateGuide("welcome", true);
+  };
+
+  
+/* ================================
+   07｜AI 泡泡：點一下開啟，再點一下關閉
+================================ */
+
+startButton.onclick = () => {
+
+  // 長按只切換模式，不啟動或停止
+  if (longPressed) {
+    longPressed = false;
+    return;
+  }
+
+  // AI 已啟動：再次點擊就關閉
+  if (state.enabled) {
+    stopGuide();
+    return;
+  }
+
+  // AI 尚未啟動：開始持續引導
+  state.mode = modeSelect.value;
+  state.enabled = true;
+
+  state.lastInteraction = Date.now();
+  state.lastCreationCount =
+    getCreations().length;
+
+  modeSelect.style.display = "none";
+
+  updateGuideBubble();
+  status("AI 持續引導中");
+
+  generateGuide("welcome", true);
+};
+
+function stopGuide() {
+  state.enabled = false;
+
+  // 停止朗讀及取消待執行的引導
+  stopSpeech();
+
+  // 恢復泡泡外觀
+  updateGuideBubble();
+  status("AI 引導已停止");
+
+  console.log(
+    "[Mindspace] AI 持續引導已停止"
+  );
+}
+
+// 讓其他程式也能停止 AI
+stopButton.onclick = stopGuide;
+
+
+  /* ================================
+     08｜偵測新作品
+  ================================= */
+
+  function checkNewCreation() {
+    const count =
+      getCreations().length;
+
+    if (
+      count > state.lastCreationCount &&
+      state.enabled
+    ) {
+      markInteraction();
+
+      scheduleGuide("created");
+    }
+
+    state.lastCreationCount = count;
+  }
+
+  /* ================================
+     09｜偵測 AI 操作成功
+  ================================= */
+
+  window.addEventListener(
+    "mindspace:ai-applied",
+    event => {
+      if (!state.enabled) return;
+
+      const result =
+        event.detail || {};
+
+      if (
+        result.success === true &&
+        result.applied > 0
+      ) {
+        markInteraction();
+
+        state.lastAIEvent = Date.now();
+
+        scheduleGuide(
+          "transformed"
+        );
+      }
+    }
+  );
+
+  /* ================================
+     10｜偵測長時間停頓
+  ================================= */
+
+  function checkIdle() {
+    if (!state.enabled) return;
+
+    if (isBusy()) return;
+
+    const now = Date.now();
+
+    const idleTime =
+      now - state.lastInteraction;
+
+    const sinceGuide =
+      now - state.lastGuide;
+
+    if (
+      idleTime >= CONFIG.idleMs &&
+      sinceGuide >= CONFIG.cooldownMs
+    ) {
+      generateGuide("idle");
+    }
+  }
+
+  /* ================================
+     11｜保留操作中的安靜時間
+  ================================= */
+
+  ["pointerdown", "keydown"].forEach(
+    name => {
+      document.addEventListener(
+        name,
+        markInteraction,
+        {
+          passive: true
+        }
+      );
+    }
+  );
+
+  /* ================================
+     12｜持續檢查
+  ================================= */
+
+  setInterval(() => {
+    checkNewCreation();
+
+    if (
+      state.enabled &&
+      state.pendingEvent &&
+      !isBusy() &&
+      Date.now() - state.lastGuide >=
+      CONFIG.cooldownMs
+    ) {
+      const event =
+        state.pendingEvent;
+
+      state.pendingEvent = null;
+
+      generateGuide(event);
+
+      return;
+    }
+
+    checkIdle();
+
+  }, CONFIG.checkMs);
+
+  /* ================================
+     13｜對外控制介面
+  ================================= */
+
+  window.mindspaceContinuousGuide = {
+    start: () => startButton.click(),
+
+    stop: () => stopButton.click(),
+
+    notify: eventName => {
+      markInteraction();
+      scheduleGuide(eventName);
+    },
+
+    getState: () => ({
+      enabled: state.enabled,
+      mode: state.mode,
+      requesting: state.requesting,
+      speaking: state.speaking
+    })
+  };
+
+  console.log(
+    "[Mindspace] 持續 AI 引導已準備完成"
+  );
+
+})();
+</script>
+
+<script>
+/* =========================================================
+   MINDSPACE｜AI BACKGROUND VOICE V1
+
+   功能：
+   1. 背景文字輸入框旁新增語音按鈕
+   2. 使用瀏覽器真實語音辨識 zh-TW
+   3. 辨識結果可修改
+   4. 可選擇語音結束後自動生成
+   5. 沿用現有 OpenAI 背景生成流程
+   6. 不修改原本角色與 AI 引導
+========================================================= */
+
+(function () {
+  "use strict";
+
+  const input = document.getElementById(
+    "mindspaceBackgroundInput"
+  );
+
+  const generateButton = document.getElementById(
+    "mindspaceGenerateBackground"
+  );
+
+  const status = document.getElementById(
+    "mindspaceBackgroundStatus"
+  );
+
+  if (!input || !generateButton || !status) {
+    console.error(
+      "[Mindspace] 找不到 AI 背景生成介面"
+    );
+    return;
+  }
+
+  // 防止重複安裝
+  if (document.getElementById(
+    "mindspaceBackgroundVoice"
+  )) {
+    return;
+  }
+
+  const Recognition =
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
+
+  const wrapper = document.createElement("div");
+
+  wrapper.id = "mindspaceBackgroundVoice";
+
+  wrapper.style.cssText = `
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    margin:10px 0 14px;
+  `;
+
+  wrapper.innerHTML = `
+    <button
+      id="mindspaceBackgroundMic"
+      type="button"
+      class="action"
+      style="
+        background:#e5f1fc;
+        margin:0;
+      "
+    >
+      🎙️ 說出我的想像世界
+    </button>
+
+    <label style="
+      display:flex;
+      align-items:center;
+      gap:9px;
+      font-size:13px;
+      color:#546a82;
+      cursor:pointer;
+    ">
+      <input
+        id="mindspaceBackgroundAutoGenerate"
+        type="checkbox"
+        style="
+          width:17px;
+          height:17px;
+          flex:none;
+        "
+      >
+      說完後自動交給 OpenAI 生成背景
+    </label>
+
+    <div
+      id="mindspaceBackgroundVoiceStatus"
+      aria-live="polite"
+      style="
+        font-size:12px;
+        line-height:1.6;
+        color:#65788d;
+      "
+    >
+      可以用語音描述世界，也可以直接打字。
+    </div>
+  `;
+
+  input.insertAdjacentElement(
+    "afterend",
+    wrapper
+  );
+
+  const micButton = document.getElementById(
+    "mindspaceBackgroundMic"
+  );
+
+  const autoCheckbox = document.getElementById(
+    "mindspaceBackgroundAutoGenerate"
+  );
+
+  const voiceStatus = document.getElementById(
+    "mindspaceBackgroundVoiceStatus"
+  );
+
+  let recognition = null;
+  let listening = false;
+  let cancelled = false;
+  let hadError = false;
+  let finalTranscript = "";
+  let originalText = "";
+
+  function setVoiceStatus(message) {
+    voiceStatus.textContent = message;
+  }
+
+  function updateMicButton() {
+    micButton.textContent = listening
+      ? "⏹️ 結束說話"
+      : "🎙️ 說出我的想像世界";
+
+    micButton.style.background = listening
+      ? "#ffe0d8"
+      : "#e5f1fc";
+
+    micButton.setAttribute(
+      "aria-pressed",
+      String(listening)
+    );
+  }
+
+  function stopListening(cancel = false) {
+    if (!recognition) return;
+
+    cancelled = cancel;
+
+    try {
+      if (cancel) {
+        recognition.abort();
+      } else {
+        recognition.stop();
+      }
+    } catch (error) {
+      console.warn(
+        "[Mindspace] 停止背景語音辨識：",
+        error
+      );
+    }
+  }
+
+  function startListening() {
+    if (listening) {
+      stopListening(false);
+      return;
+    }
+
+    if (!Recognition) {
+      setVoiceStatus(
+        "此瀏覽器不支援語音辨識，請使用最新版 Chrome 或 Edge。"
+      );
+      return;
+    }
+
+    if (generateButton.disabled) {
+      setVoiceStatus(
+        "背景正在生成，請等待完成後再說話。"
+      );
+      return;
+    }
+
+    cancelled = false;
+    hadError = false;
+    finalTranscript = "";
+    originalText = input.value.trim();
+
+    const session = new Recognition();
+
+    recognition = session;
+
+    session.lang = "zh-TW";
+    session.continuous = false;
+    session.interimResults = true;
+    session.maxAlternatives = 1;
+
+    session.onstart = function () {
+      listening = true;
+      updateMicButton();
+
+      // 避免語音朗讀干擾辨識
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+      }
+
+      setVoiceStatus(
+        "🎙️ 正在聆聽，請說出你想創造的世界……"
+      );
+    };
+
+    session.onresult = function (event) {
+      let confirmed = "";
+      let interim = "";
+
+      for (
+        let i = 0;
+        i < event.results.length;
+        i++
+      ) {
+        const result = event.results[i];
+
+        const words =
+          result[0]?.transcript || "";
+
+        if (result.isFinal) {
+          confirmed += words;
+        } else {
+          interim += words;
+        }
+      }
+
+      finalTranscript = confirmed.trim();
+
+      const spoken = (
+        confirmed + interim
+      ).trim();
+
+      input.value = [
+        originalText,
+        spoken
+      ].filter(Boolean).join("\n");
+
+      setVoiceStatus(
+        "辨識內容：" + spoken
+      );
+    };
+
+    session.onerror = function (event) {
+      hadError = true;
+
+      const messages = {
+        "not-allowed":
+          "麥克風權限被拒絕，請允許網站使用麥克風。",
+        "audio-capture":
+          "找不到可用的麥克風。",
+        "no-speech":
+          "沒有偵測到語音，請再試一次。",
+        "network":
+          "語音辨識網路連線失敗。",
+        "aborted":
+          "已取消語音辨識。"
+      };
+
+      setVoiceStatus(
+        messages[event.error] ||
+        "語音辨識失敗：" + event.error
+      );
+    };
+
+    session.onend = function () {
+      if (recognition !== session) {
+        return;
+      }
+
+      recognition = null;
+      listening = false;
+
+      updateMicButton();
+
+      if (cancelled || hadError) {
+        return;
+      }
+
+      const description =
+        input.value.trim();
+
+      if (!description) {
+        setVoiceStatus(
+          "沒有取得有效描述，請重新說話。"
+        );
+        return;
+      }
+
+      setVoiceStatus(
+        "✅ 語音辨識完成，可以修改文字或生成背景。"
+      );
+
+      if (autoCheckbox.checked) {
+        if (
+          typeof window.generateMindspaceWorldAI
+          !== "function"
+        ) {
+          setVoiceStatus(
+            "背景 AI 生成函式尚未準備完成。"
+          );
+          return;
+        }
+
+        setVoiceStatus(
+          "✨ 正在將你的語音想像交給 OpenAI……"
+        );
+
+        Promise.resolve(
+          window.generateMindspaceWorldAI(
+            description
+          )
+        ).catch(function (error) {
+          console.error(
+            "[Mindspace] 背景語音生成失敗",
+            error
+          );
+
+          setVoiceStatus(
+            "背景生成失敗：" +
+            (error?.message || String(error))
+          );
+        });
+      }
+    };
+
+    try {
+      session.start();
+    } catch (error) {
+      recognition = null;
+      listening = false;
+
+      updateMicButton();
+
+      setVoiceStatus(
+        "無法啟動麥克風：" + error.message
+      );
+    }
+  }
+
+  micButton.addEventListener(
+    "click",
+    startListening
+  );
+
+  // 手動點擊生成時，先停止語音辨識
+  generateButton.addEventListener(
+    "click",
+    function () {
+      if (listening) {
+        stopListening(true);
+      }
+    },
+    true
+  );
+
+  updateMicButton();
+
+  console.log(
+    "[Mindspace] AI 背景語音模組已載入"
+  );
+})();
+</script>
+
+
+
+<script>
+/* =====================================================
+   MINDSPACE｜VOICE WHOLE TRANSFORMATION V5
+
+   取代 index.html 原本 V3 + V4 配件流程。
+
+   appearance：
+   OpenAI 編輯完整角色 → 更新 item.img
+
+   其他指令：
+   交給原本 sketch.js 執行器。
+
+   不使用：
+   - AI 配件座標
+   - 手動配件拖曳
+   - 多層外觀指令覆蓋
+===================================================== */
+
+(function () {
+  "use strict";
+
+  const previousApply =
+    window.applyMindspaceAIOperations;
+
+  if (typeof previousApply !== "function") {
+    console.error(
+      "[Mindspace V5] 原始 AI 執行器尚未載入"
+    );
+    return;
+  }
+
+  const busyCharacters = new Set();
+
+  function findTarget(operation) {
+    const creations =
+      window.mindspaceCreations || [];
+
+    const requestedId =
+      operation.targetId ||
+      window.mindspaceSelectedId;
+
+    if (requestedId != null) {
+      const selected = creations.find(
+        item =>
+          String(item.id) === String(requestedId)
+      );
+
+      if (selected) {
+        return selected;
+      }
+
+      // 明確指定的角色不存在時，
+      // 不要偷偷修改其他角色。
+      if (operation.targetId != null) {
+        return null;
+      }
+    }
+
+    const characters = creations.filter(
+      item => item.kind === "character"
+    );
+
+    return characters.length === 1
+      ? characters[0]
+      : null;
+  }
+
+  function getDescription(operation) {
+    const parts = [
+      operation.description,
+      operation.appearance,
+      operation.feature,
+      operation.color
+    ];
+
+    return parts
+      .filter(
+        value =>
+          typeof value === "string" &&
+          value.trim()
+      )
+      .join("，")
+      .trim();
+  }
+
+  async function transformCharacter(operation) {
+    const target = findTarget(operation);
+
+    if (!target) {
+      throw new Error(
+        "請先選取要變身的積木角色"
+      );
+    }
+
+    if (target.kind !== "character") {
+      throw new Error(
+        "目前選取的作品不是角色"
+      );
+    }
+
+    const description =
+      getDescription(operation);
+
+    if (!description) {
+      throw new Error(
+        "缺少角色變身的描述"
+      );
+    }
+
+    const currentImage =
+      target.mindspaceCurrentPNG ||
+      target.originalPNG;
+
+    if (
+      typeof currentImage !== "string" ||
+      !/^data:image\/(png|jpeg|jpg|webp);base64,/i
+        .test(currentImage)
+    ) {
+      throw new Error(
+        "找不到角色目前的去背圖片"
+      );
+    }
+
+    if (
+      typeof window.replaceMindspaceCharacterImage
+        !== "function"
+    ) {
+      throw new Error(
+        "角色圖片替換功能尚未載入"
+      );
+    }
+
+    const targetId = String(target.id);
+
+    if (busyCharacters.has(targetId)) {
+      throw new Error(
+        "角色正在變身，請稍候"
+      );
+    }
+
+    const feature = String(
+      operation.feature ||
+      operation.appearance ||
+      "transformation"
+    );
+
+    const count = Math.max(
+      1,
+      Math.min(
+        30,
+        Math.round(
+          Number(operation.count) || 1
+        )
+      )
+    );
+
+    busyCharacters.add(targetId);
+
+    try {
+      setCommandStatus(
+        "✨ OpenAI 正在生成完整的變身角色……"
+      );
+
+      console.log(
+        "[Mindspace V5] OpenAI 角色變身請求",
+        {
+          targetId,
+          description,
+          feature,
+          imageLength: currentImage.length
+        }
+      );
+
+      // 沿用原本已存在的 Bridge 指令名稱。
+      // 後端已改為生成整隻角色 PNG。
+      const result = await requestAI(
+        "generatePlusPlusAccessoryPlacedAI",
+        {
+          targetId,
+          currentImage,
+          originalImage: target.originalPNG,
+          identity:
+            target.identity ||
+            target.name ||
+            "Plus-Plus character",
+          description,
+          accessory: feature,
+          color: String(
+            operation.color || ""
+          ),
+          count
+        },
+        240000
+      );
+
+      if (
+        !result ||
+        result.success !== true ||
+        result.provider !== "OpenAI" ||
+        result.transformationMode !==
+          "whole-character" ||
+        typeof result.image !== "string" ||
+        !result.image.startsWith(
+          "data:image/png;base64,"
+        )
+      ) {
+        throw new Error(
+          "OpenAI 未回傳有效的完整變身角色 PNG"
+        );
+      }
+
+      const replaced =
+        await window.replaceMindspaceCharacterImage({
+          targetId,
+          image: result.image,
+          description,
+          feature,
+          model: result.model
+        });
+
+      if (
+        !replaced ||
+        replaced.success !== true
+      ) {
+        throw new Error(
+          "完整角色圖片替換失敗"
+        );
+      }
+
+      console.log(
+        "[Mindspace V5] 整體變身成功",
+        {
+          targetId,
+          model: result.model,
+          responseId: result.responseId
+        }
+      );
+
+      window.dispatchEvent(
+        new CustomEvent(
+          "mindspace:whole-transform-success",
+          {
+            detail: {
+              targetId,
+              feature,
+              model: result.model
+            }
+          }
+        )
+      );
+
+      return replaced;
+
+    } finally {
+      busyCharacters.delete(targetId);
+    }
+  }
+
+  window.generateMindspaceWholeTransformationAI =
+    transformCharacter;
+
+  // 僅在此處接管外觀指令一次。
+  window.applyMindspaceAIOperations =
+    async function(operations) {
+      if (!Array.isArray(operations)) {
+        return {
+          success: false,
+          applied: 0,
+          failed: 1,
+          errors: ["AI 指令格式不正確"]
+        };
+      }
+
+      const appearances = [];
+      const others = [];
+
+      for (const operation of operations) {
+        if (
+          !operation ||
+          typeof operation !== "object"
+        ) {
+          continue;
+        }
+
+        if (operation.type === "appearance") {
+          appearances.push(operation);
+        } else {
+          others.push(operation);
+        }
+      }
+
+      let applied = 0;
+      let failed = 0;
+      const errors = [];
+
+      // 外觀變身由 OpenAI 圖片編輯處理。
+      for (const operation of appearances) {
+        try {
+          await transformCharacter(operation);
+          applied++;
+
+        } catch (error) {
+          failed++;
+
+          errors.push(
+            error.message || String(error)
+          );
+
+          console.error(
+            "[Mindspace V5] 外觀變身失敗",
+            error
+          );
+        }
+      }
+
+      // 其他功能完全交回原本執行器。
+      if (others.length > 0) {
+        try {
+          const result =
+            await Promise.resolve(
+              previousApply(others)
+            );
+
+          if (result === false) {
+            failed += others.length;
+
+            errors.push(
+              "原本的 AI 指令執行失敗"
+            );
+
+          } else if (
+            result &&
+            typeof result === "object"
+          ) {
+            applied += Number(
+              result.applied || 0
+            );
+
+            failed += Number(
+              result.failed || 0
+            );
+
+            if (
+              Array.isArray(result.errors)
+            ) {
+              errors.push(...result.errors);
+            }
+
+            if (
+              result.success === false &&
+              !result.failed
+            ) {
+              failed++;
+            }
+
+          } else {
+            applied += others.length;
+          }
+
+        } catch (error) {
+          failed += others.length;
+
+          errors.push(
+            error.message || String(error)
+          );
+
+          console.error(
+            "[Mindspace V5] 原有指令失敗",
+            error
+          );
+        }
+      }
+
+      return {
+        success: failed === 0,
+        applied,
+        failed,
+        errors
+      };
+    };
+
+  console.log(
+    "[Mindspace] 整體圖片變身 V5 已啟動"
+  );
+})();
+</script>
+
+
+<script>
+/* =========================================
+   MINDSPACE｜SIMPLE SOUND EFFECTS V1
+   不需要音效檔、不需要 OpenAI
+========================================= */
+
+(function () {
+  "use strict";
+
+  let audioContext = null;
+
+  function getAudioContext() {
+    const AudioContextClass =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    if (!AudioContextClass) return null;
+
+    if (!audioContext) {
+      audioContext = new AudioContextClass();
+    }
+
+    if (audioContext.state === "suspended") {
+      audioContext.resume().catch(console.warn);
+    }
+
+    return audioContext;
+  }
+
+  function playTone(
+    frequency,
+    duration = 0.15,
+    delay = 0,
+    type = "sine",
+    volume = 0.07
+  ) {
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const oscillator = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    const start = ctx.currentTime + delay;
+    const end = start + duration;
+
+    oscillator.type = type;
+    oscillator.frequency.setValueAtTime(
+      frequency,
+      start
+    );
+
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(
+      volume,
+      start + 0.015
+    );
+    gain.gain.exponentialRampToValueAtTime(
+      0.0001,
+      end
+    );
+
+    oscillator.connect(gain);
+    gain.connect(ctx.destination);
+
+    oscillator.start(start);
+    oscillator.stop(end + 0.01);
+  }
+
+  const sounds = {
+
+    // 拍照成功
+    camera() {
+      playTone(650, 0.07, 0, "triangle", 0.06);
+      playTone(980, 0.12, 0.08, "sine", 0.05);
+    },
+
+    // 角色進入世界
+    appear() {
+      playTone(420, 0.12, 0, "sine", 0.06);
+      playTone(700, 0.16, 0.09, "sine", 0.06);
+    },
+
+    // AI 角色變身成功
+    transform() {
+      playTone(523, 0.16, 0, "sine", 0.07);
+      playTone(659, 0.16, 0.12, "sine", 0.07);
+      playTone(784, 0.20, 0.24, "sine", 0.07);
+      playTone(1047, 0.38, 0.38, "sine", 0.06);
+    },
+
+    // 環境生成成功
+    environment() {
+      playTone(392, 0.25, 0, "sine", 0.04);
+      playTone(587, 0.28, 0.15, "sine", 0.05);
+      playTone(880, 0.40, 0.30, "sine", 0.04);
+    },
+
+    // 操作失敗
+    error() {
+      playTone(350, 0.14, 0, "triangle", 0.04);
+      playTone(280, 0.20, 0.15, "triangle", 0.04);
+    }
+  };
+
+  window.mindspaceSounds = sounds;
+
+  // 連接新版整體圖片變身成功事件。
+  window.addEventListener(
+    "mindspace:whole-transform-success",
+    () => sounds.transform()
+  );
+
+  // 第一次觸碰或點擊時解鎖音效。
+  function unlockAudio() {
+    getAudioContext();
+  }
+
+  document.addEventListener(
+    "pointerdown",
+    unlockAudio,
+    { once: true }
+  );
+
+  document.addEventListener(
+    "keydown",
+    unlockAudio,
+    { once: true }
+  );
+
+  console.log(
+    "[Mindspace] 簡單音效系統已啟動"
+  );
+})();
+</script>
+
+<script>
+/* =====================================================
+   MINDSPACE｜COMPANION VOICE V1
+
+   保留：
+   - 原本 AI 語音引導
+   - 原本語音辨識
+   - 原本創作指令
+   - 原本 AI 角色變身
+   - 原本 AI 環境生成
+
+   新增：
+   - 自然聊天
+   - OpenAI 意圖分流
+   - 本次聊天記憶
+   - 聊天語音回答
+===================================================== */
+
+(function () {
+  "use strict";
+
+  const originalSubmit =
+    window.submitMindspaceCommand;
+
+  if (typeof originalSubmit !== "function") {
+    console.error(
+      "[Mindspace Companion] 找不到原本的指令函式"
+    );
+    return;
+  }
+
+  const state = {
+    busy: false,
+    history: [],
+    speaking: false,
+    enabled: true
+  };
+
+  function remember(role, content) {
+    state.history.push({
+      role,
+      content: String(content).slice(0, 400)
+    });
+
+    state.history = state.history.slice(-12);
+  }
+
+  function getContext() {
+    if (
+      typeof getMindspaceContext === "function"
+    ) {
+      return getMindspaceContext();
+    }
+
+    return {
+      creations: window.mindspaceCreations || [],
+      worlds: window.mindspaceWorldZones || []
+    };
+  }
+
+  function getTargetId() {
+    if (
+      typeof getSelectedMindspaceItem ===
+      "function"
+    ) {
+      return getSelectedMindspaceItem()?.id || null;
+    }
+
+    return window.mindspaceSelectedId || null;
+  }
+
+  function showReply(text, kind = "") {
+    if (
+      typeof setCommandStatus === "function"
+    ) {
+      setCommandStatus(text, kind);
+    }
+
+    // 沿用原本的文字回饋函式
+    if (typeof say === "function") {
+      say(text);
+    }
+  }
+
+  function speakReply(text) {
+    return new Promise(resolve => {
+      if (
+        !text ||
+        !("speechSynthesis" in window)
+      ) {
+        resolve();
+        return;
+      }
+
+      const synth = window.speechSynthesis;
+
+      // 先結束上一段語音，避免聲音重疊
+      synth.cancel();
+
+      const utterance =
+        new SpeechSynthesisUtterance(text);
+
+      utterance.lang = "zh-TW";
+      utterance.rate = 0.82;
+      utterance.pitch = 1;
+      utterance.volume = 1;
+
+      const voices = synth.getVoices();
+
+      const voice = voices.find(
+        item => item.lang.toLowerCase() === "zh-tw"
+      );
+
+      if (voice) {
+        utterance.voice = voice;
+      }
+
+      let finished = false;
+
+      function finish() {
+        if (finished) return;
+        finished = true;
+        state.speaking = false;
+        resolve();
+      }
+
+      utterance.onend = finish;
+      utterance.onerror = finish;
+
+      state.speaking = true;
+
+      try {
+        synth.speak(utterance);
+      } catch (error) {
+        console.warn(
+          "[Mindspace Companion] 語音播放失敗",
+          error
+        );
+        finish();
+      }
+    });
+  }
+
+  async function companionSubmit(inputText) {
+    const text = String(inputText || "").trim();
+
+    if (!state.enabled) {
+      return originalSubmit(text);
+    }
+
+    if (!text) {
+      return originalSubmit(text);
+    }
+
+    if (state.busy) {
+      showReply(
+        "正在理解上一句話，請稍候。"
+      );
+      return;
+    }
+
+    if (
+      typeof bridgeReady !== "undefined" &&
+      !bridgeReady
+    ) {
+      return originalSubmit(text);
+    }
+
+    state.busy = true;
+
+    // 使用原本的指令狀態通知機制，
+    // 讓主動語音引導知道目前正在互動。
+    if (
+      typeof beginMindspaceCommand === "function"
+    ) {
+      beginMindspaceCommand();
+    }
+
+    if (
+      typeof setCommandBusy === "function"
+    ) {
+      setCommandBusy(true);
+    }
+
+    let result;
+
+    try {
+      showReply("正在理解你說的話……");
+
+      result = await requestAI(
+        "mindspaceCompanionAI",
+        {
+          text,
+          history: state.history,
+          context: getContext(),
+          targetId: getTargetId()
+        },
+        120000
+      );
+
+      if (
+        !result ||
+        result.success !== true ||
+        result.provider !== "OpenAI" ||
+        !result.responseId
+      ) {
+        throw new Error(
+          "OpenAI 沒有回傳可驗證的結果"
+        );
+      }
+
+      console.log(
+        "[Mindspace Companion] AI 判斷",
+        {
+          mode: result.mode,
+          model: result.model,
+          responseId: result.responseId
+        }
+      );
+
+      if (result.mode === "chat") {
+        const reply = String(
+          result.reply || ""
+        ).trim();
+
+        if (!reply) {
+          throw new Error("AI 沒有回答");
+        }
+
+        remember("user", text);
+        remember("assistant", reply);
+
+        showReply(reply, "success");
+
+        const chatInput =
+          document.getElementById("chatInput");
+
+        if (chatInput) {
+          chatInput.value = "";
+        }
+
+        await speakReply(reply);
+
+        return {
+          success: true,
+          mode: "chat",
+          reply
+        };
+      }
+
+      if (result.mode !== "command") {
+        throw new Error(
+          "AI 回傳未知的指令類型"
+        );
+      }
+
+    } catch (error) {
+      console.error(
+        "[Mindspace Companion] 錯誤",
+        error
+      );
+
+      showReply(
+        "AI 對話沒有完成：" +
+        (error?.message || String(error)),
+        "error"
+      );
+
+      return {
+        success: false,
+        error: String(error?.message || error)
+      };
+
+    } finally {
+      state.busy = false;
+
+      if (
+        typeof setCommandBusy === "function"
+      ) {
+        setCommandBusy(false);
+      }
+
+      if (
+        typeof finishMindspaceCommand ===
+        "function"
+      ) {
+        finishMindspaceCommand();
+      }
+    }
+
+    // 這句話是創作指令。
+    // 完整交還給原本的 AI 語音指令系統。
+    // 不重新實作，也不改掉原本的功能。
+    return originalSubmit(text);
+  }
+
+  // 保留原函式，外層只新增 AI 判斷。
+  window.submitMindspaceCommand =
+    companionSubmit;
+
+  // 可在 Console 測試及清除聊天記憶
+  window.mindspaceCompanion = {
+    getHistory() {
+      return state.history.map(
+        item => ({ ...item })
+      );
+    },
+
+    clearHistory() {
+      state.history = [];
+      console.log(
+        "[Mindspace Companion] 聊天記憶已清除"
+      );
+    },
+
+    enable() {
+      state.enabled = true;
+    },
+
+    disable() {
+      state.enabled = false;
+    },
+
+    getStatus() {
+      return {
+        enabled: state.enabled,
+        busy: state.busy,
+        speaking: state.speaking,
+        historyLength: state.history.length
+      };
+    }
+  };
+
+  console.log(
+    "[Mindspace Companion] AI 陪伴對話已載入"
+  );
+})();
+</script>
+
+</body>
+</html>

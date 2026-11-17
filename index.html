@@ -6018,6 +6018,260 @@ stopButton.onclick = stopGuide;
 })();
 </script>
 
+
 <script src="./home.js"></script>
+
+<!-- ==========================================
+     Mindspace｜創作世界返回上一頁 v1
+     自由創作 → 首頁
+     神秘主題 → 神秘題目選單
+     不重新整理、不清空創作資料
+========================================== -->
+
+<style>
+  #mindspaceBackButton {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 35;
+
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+
+    min-width: 112px;
+    height: 52px;
+    padding: 0 18px;
+
+    border: 3px solid rgba(255,255,255,.85);
+    border-radius: 20px;
+
+    background: linear-gradient(
+      180deg,
+      #fff6d7,
+      #ffd77c
+    );
+
+    color: #634123;
+    font-family: Arial, "Noto Sans TC", sans-serif;
+    font-size: 17px;
+    font-weight: 900;
+
+    box-shadow:
+      0 5px 0 #d09c45,
+      0 8px 20px rgba(0,0,0,.22);
+
+    cursor: pointer;
+    touch-action: manipulation;
+    user-select: none;
+
+    transition:
+      transform .15s ease,
+      filter .15s ease;
+  }
+
+  #mindspaceBackButton.visible {
+    display: flex;
+  }
+
+  #mindspaceBackButton:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.06);
+  }
+
+  #mindspaceBackButton:active {
+    transform: translateY(3px);
+    box-shadow:
+      0 2px 0 #d09c45,
+      0 4px 10px rgba(0,0,0,.2);
+  }
+
+  #mindspaceBackButton .backIcon {
+    font-size: 23px;
+    line-height: 1;
+  }
+
+  @media (max-width: 600px) {
+    #mindspaceBackButton {
+      top: 12px;
+      left: 12px;
+
+      min-width: 90px;
+      height: 45px;
+      padding: 0 12px;
+
+      font-size: 14px;
+      border-radius: 16px;
+    }
+
+    #mindspaceBackButton .backIcon {
+      font-size: 20px;
+    }
+  }
+</style>
+
+<script>
+(function () {
+  "use strict";
+
+  /*
+   * Mindspace｜返回上一頁
+   *
+   * 使用 home.js 已提供的 API：
+   * - MindspaceHome.show()
+   * - MindspaceHome.enterMode()
+   * - MindspaceHome.getMode()
+   *
+   * 不修改 sketch.js。
+   */
+
+  let previousPage = "home";
+
+  // =====================================
+  // 01. 建立按鈕
+  // =====================================
+
+  const backButton = document.createElement("button");
+
+  backButton.id = "mindspaceBackButton";
+  backButton.type = "button";
+
+  backButton.innerHTML = `
+    <span class="backIcon">⌂</span>
+    <span>返回</span>
+  `;
+
+  backButton.setAttribute(
+    "aria-label",
+    "返回上一頁"
+  );
+
+  document.body.appendChild(backButton);
+
+  // =====================================
+  // 02. 更新按鈕顯示
+  // =====================================
+
+  function updateBackButton(mode) {
+    const isWorld = mode === "free";
+
+    backButton.classList.toggle(
+      "visible",
+      isWorld
+    );
+
+    backButton.title =
+      previousPage === "mystery"
+        ? "返回神秘題目"
+        : "返回首頁";
+  }
+
+  // =====================================
+  // 03. 記錄選擇的主題
+  // =====================================
+
+  window.addEventListener(
+    "mindspace:theme-selected",
+    function () {
+      previousPage = "mystery";
+    }
+  );
+
+  // =====================================
+  // 04. 監聽頁面切換
+  // =====================================
+
+  window.addEventListener(
+    "mindspace:mode-change",
+    function (event) {
+      const detail = event.detail || {};
+      const mode = detail.mode;
+
+      if (mode === "home") {
+        previousPage = "home";
+      }
+
+      if (mode === "mystery") {
+        previousPage = "mystery";
+      }
+
+      if (mode === "free") {
+        previousPage = detail.theme
+          ? "mystery"
+          : "home";
+      }
+
+      updateBackButton(mode);
+    }
+  );
+
+  // =====================================
+  // 05. 點擊返回按鈕
+  // =====================================
+
+  backButton.addEventListener(
+    "click",
+    function () {
+      const home = window.MindspaceHome;
+
+      if (!home) {
+        console.warn(
+          "[Mindspace] 首頁系統尚未載入"
+        );
+        return;
+      }
+
+      // 關閉工作台，不刪除資料
+      const sidebar =
+        document.getElementById("sidebar");
+
+      if (sidebar) {
+        sidebar.classList.remove("open");
+      }
+
+      // 從神秘題目進入
+      if (previousPage === "mystery") {
+        home.enterMode("mystery");
+        return;
+      }
+
+      // 從自由創作進入
+      home.show();
+    }
+  );
+
+  // =====================================
+  // 06. 初始狀態
+  // =====================================
+
+  function initializeBackButton() {
+    const home = window.MindspaceHome;
+
+    if (!home) {
+      updateBackButton("home");
+      return;
+    }
+
+    const mode = home.getMode();
+
+    if (mode === "free") {
+      previousPage = home.getSelectedTheme()
+        ? "mystery"
+        : "home";
+    }
+
+    updateBackButton(mode);
+  }
+
+  initializeBackButton();
+
+  console.log(
+    "[Mindspace] 返回上一頁功能已載入"
+  );
+})();
+</script>
+
 </body>
 </html>
+

@@ -333,6 +333,306 @@ button:focus-visible{outline:3px solid #5975d9}
   #winCard h1{font-size:28px}
   #winCard h2{font-size:20px}
 }
+/* =======================================
+   MINDSPACE V5｜紫金色遊戲介面
+======================================= */
+
+:root {
+  --v5-purple: #5b408f;
+  --v5-deep-purple: #30234f;
+  --v5-gold: #f5c76c;
+  --v5-cream: #fff7e8;
+  --v5-text: #493761;
+}
+
+/* 主標題 */
+#titleBubble {
+  color: #fff7e8;
+
+  background: linear-gradient(
+    145deg,
+    #7554a5,
+    #392657
+  );
+
+  border: 2px solid #f4cf82;
+
+  border-radius: 20px;
+
+  box-shadow:
+    0 5px 0 #261936,
+    0 10px 25px #130c2880,
+    inset 0 2px 4px #ffffff55;
+}
+
+/* 狀態訊息 */
+#status {
+  color: #493761;
+
+  background: #fff8edee;
+
+  border: 2px solid #e8ca91;
+
+  box-shadow:
+    0 5px 18px #170c3430;
+}
+
+/* 視角選單 */
+#viewBar {
+  background: #fff7e8f2;
+
+  border: 2px solid #e8ca91;
+
+  box-shadow:
+    0 5px 0 #b49a79,
+    0 10px 20px #20113745;
+}
+
+#viewBar button {
+  color: #654e82;
+
+  border-radius: 12px;
+
+  transition:
+    background 0.2s,
+    transform 0.2s;
+}
+
+#viewBar button.active {
+  color: white;
+
+  background: linear-gradient(
+    180deg,
+    #9574d0,
+    #60419a
+  );
+
+  box-shadow:
+    inset 0 2px 4px #ffffff55,
+    0 3px 0 #3e286d;
+}
+
+/* 圓形操作按鈕 */
+.bubble {
+  color: #60457d;
+
+  background: linear-gradient(
+    145deg,
+    #fffdf6,
+    #eadbc7
+  );
+
+  border: 3px solid #f2d48d;
+
+  box-shadow:
+    0 6px 0 #ad8c65,
+    0 11px 22px #160d3555,
+    inset 0 3px 5px #ffffff;
+
+  transition:
+    transform 0.15s,
+    box-shadow 0.15s;
+}
+
+.bubble.primary {
+  color: #543668;
+
+  background: linear-gradient(
+    145deg,
+    #fff1bc,
+    #eebc5e
+  );
+
+  border-color: #ffe2a0;
+}
+
+.bubble.active {
+  color: white;
+
+  background: linear-gradient(
+    145deg,
+    #9976d5,
+    #58388f
+  );
+
+  border-color: #f6d388;
+}
+
+.bubble:not(:disabled):active {
+  transform: translateY(4px);
+
+  box-shadow:
+    0 2px 0 #ad8c65,
+    0 5px 12px #160d3544;
+}
+
+.bubble .bubbleLabel {
+  font-weight: 800;
+}
+
+/* 搖桿 */
+#joystick {
+  background: #fff5df88;
+
+  border: 4px solid #f6d68f;
+
+  box-shadow:
+    0 7px 0 #8c6d9c,
+    0 12px 30px #20113755,
+    inset 0 3px 12px #ffffff77;
+}
+
+#stick {
+  background: linear-gradient(
+    145deg,
+    #a98be0,
+    #65409b
+  );
+
+  border: 3px solid #e4c4ff;
+
+  box-shadow:
+    0 5px 0 #3c2767,
+    0 8px 15px #20113755,
+    inset 0 3px 5px #ffffff66;
+}
+
+/* 掃描工作台 */
+#scanCard {
+  background: #fff8ee;
+
+  border: 3px solid #f4d493;
+
+  box-shadow:
+    0 20px 70px #110c2c99;
+}
+
+#scanHeader {
+  color: #fff8ee;
+
+  background: linear-gradient(
+    120deg,
+    #7652a9,
+    #392657
+  );
+
+  border-bottom: 3px solid #edc77b;
+}
+
+#scanHeader strong {
+  color: #fff8ee;
+}
+
+#scanWrap {
+  background: #f9f1e5;
+
+  border: 3px dashed #c7a7db;
+}
+
+.actionRow button {
+  color: #563d75;
+
+  background: linear-gradient(
+    180deg,
+    #ffffff,
+    #eadfef
+  );
+
+  border: 2px solid #d7c2e6;
+
+  box-shadow:
+    0 4px 0 #b8a1ca;
+}
+
+.actionRow button.primary,
+.actionRow button.finish {
+  color: #4e315c;
+
+  background: linear-gradient(
+    180deg,
+    #ffedaf,
+    #edbd60
+  );
+
+  border-color: #f5d78e;
+
+  box-shadow:
+    0 5px 0 #b48a45;
+}
+
+.actionRow button.active {
+  color: white;
+
+  background: linear-gradient(
+    180deg,
+    #9e7cd5,
+    #62429b
+  );
+}
+
+/* 過關畫面 */
+#winModal {
+  background: #211338d9;
+}
+
+#winCard {
+  background: linear-gradient(
+    160deg,
+    #fffdf6,
+    #f6e7cf
+  );
+
+  border: 4px solid #f4d188;
+
+  box-shadow:
+    0 12px 0 #8d6b9e,
+    0 25px 70px #0d082d88;
+}
+
+#winCard h1 {
+  color: #7450a6;
+}
+
+#winCard button {
+  color: #533a69;
+
+  background: linear-gradient(
+    180deg,
+    #fff0b6,
+    #efbe65
+  );
+
+  border: 2px solid #f6d993;
+
+  box-shadow:
+    0 5px 0 #b88b48;
+}
+
+/* 選擇起點終點提示 */
+#selectBanner {
+  color: #51366e;
+
+  background: #fff1c7;
+
+  border: 2px solid #d8aa5e;
+
+  box-shadow:
+    0 5px 0 #a98758,
+    0 10px 25px #21123755;
+}
+
+/* 空白歡迎畫面 */
+#emptyWelcome {
+  color: #54396f;
+
+  background: #fff8ecf2;
+
+  border: 3px solid #eac782;
+
+  box-shadow:
+    0 10px 0 #a98bba,
+    0 20px 45px #130b3655;
+}
 </style>
 
 <script type="importmap">
@@ -621,9 +921,14 @@ function scanMessage(message){
 // THREE.JS 世界
 // =======================================
 
-const scene=new THREE.Scene();
-scene.background=new THREE.Color("#cdeaff");
+const scene = new THREE.Scene();
 
+scene.background = new THREE.Color("#21183c");
+
+scene.fog = new THREE.FogExp2(
+  0x21183c,
+  0.012
+);
 const camera=new THREE.PerspectiveCamera(
   65,1,.05,200
 );
@@ -637,7 +942,10 @@ renderer.setPixelRatio(
 );
 
 renderer.outputColorSpace=THREE.SRGBColorSpace;
-
+// V5｜精緻色彩與光影
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.35;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
 $("world").appendChild(renderer.domElement);
 
 scene.add(new THREE.HemisphereLight(
@@ -739,74 +1047,102 @@ scene.add(endGroup);
 // 與實體積木相似，但不代表精確掃描出
 // 每一顆真實積木的角度與接合方式。
 
-function makePlusShape(){
-  const s=new THREE.Shape();
+// =======================================
+// V5｜精緻 PLUS-PLUS 立體積木
+// =======================================
 
-  // 具有上下、左右突出端與凹槽的
-  // 近似 Plus-Plus 拼接輪廓。
-  const points=[
-    [-.18,-.50],
-    [ .18,-.50],
-    [ .18,-.29],
-    [ .30,-.29],
-    [ .30,-.48],
-    [ .49,-.48],
-    [ .49,-.16],
-    [ .30,-.16],
-    [ .30, .16],
-    [ .49, .16],
-    [ .49, .48],
-    [ .30, .48],
-    [ .30, .29],
-    [ .18, .29],
-    [ .18, .50],
-    [-.18, .50],
-    [-.18, .29],
-    [-.30, .29],
-    [-.30, .48],
-    [-.49, .48],
-    [-.49, .16],
-    [-.30, .16],
-    [-.30,-.16],
-    [-.49,-.16],
-    [-.49,-.48],
-    [-.30,-.48],
-    [-.30,-.29],
-    [-.18,-.29]
+// 建立 Plus-Plus 近似輪廓
+// 保留上下與左右的拼接凹凸特徵
+function makePlusShape() {
+
+  const shape = new THREE.Shape();
+
+  const points = [
+    [-0.18, -0.50],
+    [ 0.18, -0.50],
+    [ 0.18, -0.29],
+    [ 0.30, -0.29],
+    [ 0.30, -0.48],
+    [ 0.49, -0.48],
+    [ 0.49, -0.16],
+    [ 0.30, -0.16],
+    [ 0.30,  0.16],
+    [ 0.49,  0.16],
+    [ 0.49,  0.48],
+    [ 0.30,  0.48],
+    [ 0.30,  0.29],
+    [ 0.18,  0.29],
+    [ 0.18,  0.50],
+    [-0.18,  0.50],
+    [-0.18,  0.29],
+    [-0.30,  0.29],
+    [-0.30,  0.48],
+    [-0.49,  0.48],
+    [-0.49,  0.16],
+    [-0.30,  0.16],
+    [-0.30, -0.16],
+    [-0.49, -0.16],
+    [-0.49, -0.48],
+    [-0.30, -0.48],
+    [-0.30, -0.29],
+    [-0.18, -0.29]
   ];
 
-  s.moveTo(points[0][0],points[0][1]);
+  shape.moveTo(
+    points[0][0],
+    points[0][1]
+  );
 
-  for(let i=1;i<points.length;i++){
-    s.lineTo(points[i][0],points[i][1]);
+  for (let i = 1; i < points.length; i++) {
+    shape.lineTo(
+      points[i][0],
+      points[i][1]
+    );
   }
 
-  s.closePath();
-  return s;
+  shape.closePath();
+
+  return shape;
 }
 
-const plusShape=makePlusShape();
+const plusShape = makePlusShape();
 
-const plusGeometry=new THREE.ExtrudeGeometry(
-  plusShape,{
-    depth:.17,
-    bevelEnabled:true,
-    bevelThickness:.025,
-    bevelSize:.025,
-    bevelSegments:1,
-    steps:1,
-    curveSegments:1
+// 增加模型的圓潤程度
+const plusGeometry = new THREE.ExtrudeGeometry(
+  plusShape,
+  {
+    depth: 0.18,
+    steps: 1,
+    bevelEnabled: true,
+    bevelThickness: 0.035,
+    bevelSize: 0.032,
+    bevelSegments: 3,
+    curveSegments: 3
   }
 );
 
+// 將模型深度置中
+plusGeometry.translate(0, 0, -0.09);
+
 plusGeometry.computeVertexNormals();
 
-// 用於牆面裝飾的共享模型
-const plusMaterial=new THREE.MeshStandardMaterial({
-  color:0xffffff,
-  roughness:.6,
-  metalness:0
+// Plus-Plus 塑膠材質
+const plusMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0xffffff,
+
+  metalness: 0,
+
+  roughness: 0.27,
+
+  clearcoat: 0.65,
+
+  clearcoatRoughness: 0.19,
+
+  reflectivity: 0.5,
+
+  side: THREE.DoubleSide
 });
+
 
 let mazeGroup=new THREE.Group();
 scene.add(mazeGroup);

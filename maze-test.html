@@ -3,8 +3,8 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Mindspace｜小小迷宮設計師 V3</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mindspace｜小小迷宮設計師 V4</title>
 
 <style>
 *{box-sizing:border-box}
@@ -20,70 +20,69 @@ button{
   color:#26364b;font-weight:700;
   -webkit-tap-highlight-color:transparent
 }
-button:disabled{opacity:.45;cursor:not-allowed}
-button:focus-visible{outline:3px solid #5277dc}
-#world{
-  position:fixed;inset:0;
-  background:linear-gradient(#cdeaff,#f5ebd6)
-}
+button:disabled{opacity:.4;cursor:not-allowed}
+button:focus-visible{outline:3px solid #5975d9}
+.hidden{display:none!important}
+
+#world{position:fixed;inset:0}
 #world canvas{
   width:100%;height:100%;display:block;
   touch-action:none
 }
 #hud{
   position:fixed;inset:0;
-  pointer-events:none;z-index:4
+  z-index:4;pointer-events:none
 }
 #hud>*{pointer-events:auto}
+
 #titleBubble{
-  position:absolute;top:18px;left:18px;
-  background:#fffffff0;border-radius:20px;
-  padding:12px 18px;
+  position:absolute;top:16px;left:16px;
+  padding:12px 17px;
+  background:#fffffff0;border-radius:19px;
   box-shadow:0 5px 20px #32465a22;
-  font-weight:bold;font-size:15px
+  font-size:15px;font-weight:bold
 }
 #status{
-  position:absolute;top:77px;left:18px;
-  max-width:min(390px,calc(100vw - 120px));
-  background:#ffffffed;
-  border-radius:15px;padding:10px 13px;
-  font-size:13px;line-height:1.55;
-  box-shadow:0 4px 15px #32465a18
+  position:absolute;top:76px;left:16px;
+  max-width:min(390px,calc(100vw - 110px));
+  background:#ffffffec;border-radius:15px;
+  padding:10px 13px;font-size:13px;
+  line-height:1.6;box-shadow:0 4px 15px #32465a18
 }
 #viewBar{
-  position:absolute;top:18px;right:18px;
-  display:flex;gap:7px;
-  background:#ffffffdd;padding:6px;
-  border-radius:18px
+  position:absolute;top:16px;right:16px;
+  display:flex;gap:5px;
+  background:#ffffffdf;
+  border-radius:18px;padding:5px
 }
 #viewBar button{
   padding:10px 12px;border-radius:13px;
   background:transparent;font-size:13px
 }
 #viewBar button.active{
-  background:#5975d9;color:white
+  background:#5975d9;color:#fff
 }
 #bubbleRail{
-  position:absolute;right:20px;top:50%;
+  position:absolute;right:18px;top:50%;
   transform:translateY(-50%);
-  display:flex;flex-direction:column;gap:14px
+  display:flex;flex-direction:column;gap:12px
 }
 .bubble{
-  width:64px;height:64px;border-radius:50%;
+  width:62px;height:62px;border-radius:50%;
   background:#fffffff0;
   box-shadow:0 6px 22px #34496930;
-  display:flex;align-items:center;justify-content:center;
-  flex-direction:column;gap:2px
+  display:flex;align-items:center;
+  justify-content:center;flex-direction:column;
+  gap:2px
 }
-.bubble .symbol{font-size:24px;line-height:1}
-.bubble .bubbleLabel{font-size:10px}
 .bubble.primary{background:#ffcf64}
-.bubble.active{background:#5975d9;color:white}
+.bubble.active{background:#5975d9;color:#fff}
+.bubble .symbol{font-size:23px;line-height:1}
+.bubble .bubbleLabel{font-size:10px}
 #joystick{
-  position:absolute;bottom:30px;left:30px;
-  width:140px;height:140px;border-radius:50%;
-  background:#ffffff7a;
-  border:3px solid #ffffffd0;
+  position:absolute;bottom:28px;left:28px;
+  width:138px;height:138px;border-radius:50%;
+  background:#ffffff7b;border:3px solid #ffffffd0;
   box-shadow:0 6px 24px #34496922;
   touch-action:none;user-select:none
 }
@@ -95,77 +94,69 @@ button:focus-visible{outline:3px solid #5277dc}
   box-shadow:0 4px 12px #243d7b55
 }
 #hint{
-  position:absolute;bottom:20px;right:20px;
-  background:#ffffffd9;border-radius:15px;
+  position:absolute;right:16px;bottom:16px;
+  background:#ffffffdf;border-radius:15px;
   padding:9px 12px;font-size:12px;
-  line-height:1.6;max-width:220px
+  line-height:1.6;max-width:210px
 }
-#startBanner{
-  position:absolute;left:50%;top:100px;
+#selectBanner{
+  position:absolute;top:105px;left:50%;
   transform:translateX(-50%);
-  padding:13px 20px;
-  border-radius:18px;
   background:#ffdf84;
+  border-radius:18px;padding:13px 20px;
+  text-align:center;font-weight:bold;
   box-shadow:0 6px 20px #0002;
-  font-weight:bold;text-align:center;
   display:none;max-width:80vw
 }
-#startBanner.show{display:block}
+#selectBanner.show{display:block}
 #emptyWelcome{
   position:absolute;left:50%;top:50%;
   transform:translate(-50%,-50%);
   background:#fffffff0;
-  border-radius:26px;
-  padding:28px 34px;
+  border-radius:26px;padding:28px 32px;
   width:min(420px,80vw);
   text-align:center;
   box-shadow:0 12px 38px #34496920;
   pointer-events:none
 }
-#emptyWelcome h2{margin:8px 0}
+#emptyWelcome h2{margin:10px 0}
 #emptyWelcome p{font-size:14px;line-height:1.8}
-.hidden{display:none!important}
 
-/* 掃描工作台：全畫面浮層 */
+/* 掃描工作台 */
 #scanModal{
   position:fixed;inset:0;z-index:20;
-  background:#18243dc9;
-  display:none;
-  align-items:center;justify-content:center;
-  padding:16px
+  background:#18243dce;
+  display:none;align-items:center;
+  justify-content:center;padding:14px
 }
 #scanModal.open{display:flex}
 #scanCard{
   width:min(950px,100%);
-  max-height:calc(100dvh - 32px);
-  background:#fff;border-radius:24px;
-  overflow:hidden;
-  display:flex;flex-direction:column;
+  max-height:calc(100dvh - 28px);
+  background:white;border-radius:24px;
+  overflow:hidden;display:flex;flex-direction:column;
   box-shadow:0 20px 65px #0005
 }
 #scanHeader{
   display:flex;align-items:center;
   justify-content:space-between;
-  padding:14px 18px;border-bottom:1px solid #e3e9f3
+  padding:14px 18px;
+  border-bottom:1px solid #e3e9f3
 }
 #scanHeader strong{font-size:17px}
 #closeScan{
-  background:#edf2f9;border-radius:50%;
-  width:38px;height:38px;font-size:22px
+  width:38px;height:38px;border-radius:50%;
+  background:#edf2f9;font-size:22px
 }
 #scanBody{
   display:grid;
   grid-template-columns:minmax(250px,1fr) minmax(250px,1fr);
-  gap:20px;padding:20px;
-  overflow:auto
+  gap:20px;padding:20px;overflow:auto
 }
-#scanLeft,#scanRight{min-width:0}
-#scanLeft h3,#scanRight h3{
-  margin:0 0 12px;font-size:15px
-}
+#scanBody section{min-width:0}
+#scanBody h3{font-size:15px;margin:0 0 12px}
 #scanWrap{
-  position:relative;width:100%;
-  aspect-ratio:1;
+  position:relative;width:100%;aspect-ratio:1;
   background:#f3f6fa;
   border:2px dashed #bdc9d9;
   border-radius:16px;overflow:hidden
@@ -181,8 +172,8 @@ button:focus-visible{outline:3px solid #5277dc}
   pointer-events:none;color:#8190a2
 }
 .actionRow{
-  display:flex;flex-wrap:wrap;gap:8px;
-  margin:10px 0
+  display:flex;flex-wrap:wrap;
+  gap:8px;margin:10px 0
 }
 .actionRow button{
   flex:1;min-width:90px;
@@ -191,10 +182,10 @@ button:focus-visible{outline:3px solid #5277dc}
 }
 .actionRow button.primary{background:#ffcf64}
 .actionRow button.active{
-  background:#5975d9;color:white
+  background:#5975d9;color:#fff
 }
 .actionRow button.finish{
-  background:#5975d9;color:white;
+  background:#5975d9;color:#fff;
   font-size:16px;padding:15px
 }
 .control{
@@ -210,13 +201,12 @@ button:focus-visible{outline:3px solid #5277dc}
 }
 #scanMessage{
   padding:10px 12px;
-  border-radius:12px;
-  background:#f2f6fc;
+  background:#f2f6fc;border-radius:12px;
   font-size:12px;line-height:1.6;
   margin-top:10px
 }
 
-/* 相機浮層 */
+/* 相機 */
 #cameraModal{
   position:fixed;inset:0;z-index:30;
   background:#10192bed;
@@ -233,48 +223,115 @@ button:focus-visible{outline:3px solid #5277dc}
 }
 #cameraModal button{
   padding:13px 22px;border-radius:14px;
-  background:#fff
+  background:white
 }
 #cameraModal #capture{background:#ffcf64}
 
+/* 過關畫面 */
+#winModal{
+  position:fixed;inset:0;z-index:40;
+  background:#243b72b8;
+  display:none;align-items:center;
+  justify-content:center;padding:20px;
+  overflow:hidden
+}
+#winModal.open{display:flex}
+#winCard{
+  position:relative;z-index:2;
+  width:min(460px,100%);
+  padding:35px 25px;
+  background:#fffaf0;
+  border-radius:30px;
+  text-align:center;
+  box-shadow:0 20px 60px #0004;
+  animation:popIn .5s ease-out
+}
+#winCard .trophy{font-size:70px}
+#winCard h1{
+  margin:10px 0;
+  color:#5975d9;font-size:34px
+}
+#winCard h2{
+  margin:10px 0 18px;
+  color:#26364b;font-size:23px
+}
+#winCard p{
+  font-size:14px;line-height:1.8;
+  color:#61738a
+}
+#winCard button{
+  margin-top:14px;padding:15px 22px;
+  border-radius:16px;background:#ffcf64;
+  font-size:16px
+}
+#confetti{
+  position:absolute;inset:0;
+  pointer-events:none;overflow:hidden
+}
+.confettiPiece{
+  position:absolute;top:-30px;
+  width:12px;height:20px;
+  animation:confettiFall var(--duration) linear forwards;
+  animation-delay:var(--delay);
+  transform:rotate(var(--rotation));
+  background:var(--color)
+}
+@keyframes popIn{
+  0%{transform:scale(.65);opacity:0}
+  70%{transform:scale(1.06);opacity:1}
+  100%{transform:scale(1);opacity:1}
+}
+@keyframes confettiFall{
+  to{
+    transform:translateY(115vh)
+      rotate(900deg);
+    opacity:.2
+  }
+}
+
 @media(max-width:760px){
   #titleBubble{
-    top:10px;left:10px;padding:9px 11px;
-    font-size:12px
+    top:9px;left:9px;
+    padding:9px 11px;font-size:12px
   }
   #status{
-    top:57px;left:10px;
-    font-size:11px;max-width:240px
+    top:56px;left:9px;
+    font-size:11px;max-width:220px
   }
   #viewBar{
-    top:10px;right:8px;gap:2px;padding:4px
+    top:9px;right:7px;
+    gap:2px;padding:4px
   }
   #viewBar button{
     font-size:11px;padding:8px 7px
   }
-  #bubbleRail{right:12px;gap:10px}
-  .bubble{width:54px;height:54px}
-  .bubble .symbol{font-size:21px}
+  #bubbleRail{right:10px;gap:9px}
+  .bubble{width:52px;height:52px}
+  .bubble .symbol{font-size:20px}
   #joystick{
-    left:14px;bottom:18px;
-    width:115px;height:115px
+    left:13px;bottom:16px;
+    width:112px;height:112px
   }
-  #stick{width:52px;height:52px}
+  #stick{width:50px;height:50px}
   #hint{
-    right:8px;bottom:10px;
-    max-width:155px;font-size:10px
+    right:7px;bottom:8px;
+    font-size:10px;max-width:145px
   }
-  #startBanner{
+  #selectBanner{
     top:110px;font-size:12px;
     padding:10px 12px
+  }
+  #scanModal{padding:7px}
+  #scanCard{
+    max-height:calc(100dvh - 14px)
   }
   #scanBody{
     grid-template-columns:1fr;
     padding:14px;gap:18px
   }
-  #scanCard{max-height:calc(100dvh - 16px)}
-  #scanModal{padding:8px}
   #scanWrap{max-width:340px;margin:auto}
+  #winCard h1{font-size:28px}
+  #winCard h2{font-size:20px}
 }
 </style>
 
@@ -292,10 +349,12 @@ button:focus-visible{outline:3px solid #5277dc}
 <div id="world"></div>
 
 <div id="hud">
-  <div id="titleBubble">🧩 小小迷宮設計師</div>
+  <div id="titleBubble">
+    🧩 小小迷宮設計師
+  </div>
 
   <div id="status" role="status">
-    點右側相機泡泡，創造自己的迷宮！
+    點擊相機泡泡，創造你的迷宮！
   </div>
 
   <div id="viewBar">
@@ -305,20 +364,22 @@ button:focus-visible{outline:3px solid #5277dc}
   </div>
 
   <div id="bubbleRail">
-    <button id="cameraBubble" class="bubble primary"
-            aria-label="拍照掃描迷宮">
+    <button id="cameraBubble" class="bubble primary">
       <span class="symbol">📷</span>
       <span class="bubbleLabel">掃描</span>
     </button>
 
-    <button id="startBubble" class="bubble"
-            aria-label="設定探索起點" disabled>
+    <button id="startBubble" class="bubble" disabled>
       <span class="symbol">📍</span>
       <span class="bubbleLabel">起點</span>
     </button>
 
-    <button id="resetBubble" class="bubble"
-            aria-label="回到探索起點" disabled>
+    <button id="endBubble" class="bubble" disabled>
+      <span class="symbol">🚩</span>
+      <span class="bubbleLabel">終點</span>
+    </button>
+
+    <button id="resetBubble" class="bubble" disabled>
       <span class="symbol">↩️</span>
       <span class="bubbleLabel">返回</span>
     </button>
@@ -329,39 +390,38 @@ button:focus-visible{outline:3px solid #5277dc}
   </div>
 
   <div id="hint">
-    搖桿：自由移動<br>
+    搖桿：移動角色<br>
     第一人稱：拖曳轉向<br>
     立體：拖曳旋轉<br>
     電腦：W A S D
   </div>
 
-  <div id="startBanner">
-    📍 點選迷宮中的空白通道，決定從哪裡出發！
-  </div>
+  <div id="selectBanner"></div>
 
   <div id="emptyWelcome">
-    <div style="font-size:42px">🧩</div>
+    <div style="font-size:45px">🧩</div>
     <h2>創造你的迷宮世界</h2>
     <p>
       用 Plus-Plus 積木排列自己的迷宮，
-      點擊右邊的 📷 泡泡拍照，
-      就能走進你創造的 3D 世界！
+      點擊右側 📷 泡泡掃描，
+      讓積木變成可以探索的 3D 世界！
     </p>
   </div>
 </div>
 
-<!-- 掃描浮動工作台 -->
+<!-- 掃描工作台 -->
 <div id="scanModal" role="dialog"
-     aria-modal="true" aria-label="迷宮掃描工作台">
-
+     aria-modal="true"
+     aria-label="迷宮掃描工作台">
   <div id="scanCard">
     <div id="scanHeader">
       <strong>📷 創造我的 3D 迷宮</strong>
-      <button id="closeScan" aria-label="關閉掃描視窗">×</button>
+      <button id="closeScan"
+              aria-label="關閉掃描視窗">×</button>
     </div>
 
     <div id="scanBody">
-      <section id="scanLeft">
+      <section>
         <h3>① 拍攝實體迷宮</h3>
 
         <div class="actionRow">
@@ -376,17 +436,17 @@ button:focus-visible{outline:3px solid #5277dc}
           <canvas id="scanCanvas"
                   width="480" height="480"></canvas>
           <div id="scanPlaceholder">
-            等待孩子創造的迷宮照片…
+            等待迷宮照片…
           </div>
         </div>
 
         <p class="note">
-          建議在單色底板上平放積木，
-          並從正上方拍攝。
+          將 Plus-Plus 積木平放在單色底板，
+          從正上方拍攝。
         </p>
       </section>
 
-      <section id="scanRight">
+      <section>
         <h3>② 辨識與修正牆壁</h3>
 
         <label class="control">
@@ -415,12 +475,12 @@ button:focus-visible{outline:3px solid #5277dc}
         </div>
 
         <p class="note">
-          紅色半透明區域代表辨識出的牆壁。
-          可在左側照片上補牆或擦除。
+          紅色區域是辨識出的牆壁。
+          可以在照片上補牆或擦除。
         </p>
 
         <h3 style="margin-top:22px">
-          ③ 進入我的迷宮世界
+          ③ 生成 Plus-Plus 迷宮
         </h3>
 
         <label class="control">
@@ -439,21 +499,49 @@ button:focus-visible{outline:3px solid #5277dc}
 
         <div id="scanMessage">
           先拍照，再辨識牆壁。
-          確認後就可以進入 3D 世界！
         </div>
       </section>
     </div>
   </div>
 </div>
 
-<!-- 即時相機 -->
+<!-- 相機 -->
 <div id="cameraModal">
   <video id="cameraVideo"
          autoplay playsinline muted></video>
-
   <div class="actionRow">
     <button id="capture">📸 拍攝迷宮</button>
     <button id="closeCamera">關閉相機</button>
+  </div>
+</div>
+
+<!-- 過關畫面 -->
+<div id="winModal" role="dialog"
+     aria-modal="true"
+     aria-label="恭喜過關">
+  <div id="confetti"></div>
+
+  <div id="winCard">
+    <div class="trophy">🏆</div>
+    <h1>🎉 恭喜過關！</h1>
+    <h2>換你出題製作迷宮！</h2>
+
+    <p>
+      你成功走到終點了！<br>
+      現在換你用 Plus-Plus 積木，
+      設計一座新的迷宮讓大家挑戰！
+    </p>
+
+    <button id="createAgain">
+      🧩 再創造一座迷宮
+    </button>
+
+    <div style="margin-top:12px">
+      <button id="keepExploring"
+              style="background:#eaf0fa;font-size:13px">
+        繼續探索這座迷宮
+      </button>
+    </div>
   </div>
 </div>
 
@@ -467,6 +555,7 @@ const IMAGE_SIZE=480;
 const WORLD_SIZE=20;
 const CELL=WORLD_SIZE/SIZE;
 const PLAYER_RADIUS=.20;
+const END_RADIUS=.55;
 
 let wallHeight=2.5;
 
@@ -474,8 +563,13 @@ let hasPhoto=false;
 let maskReady=false;
 let mazeReady=false;
 
+// 編輯中的辨識資料
 let mask=new Uint8Array(SIZE*SIZE);
 let colors=new Uint8Array(SIZE*SIZE*3);
+
+// 已生成的迷宮資料
+// 分開保存，避免重新掃描時舊迷宮碰撞突然改變
+let activeMask=new Uint8Array(SIZE*SIZE);
 
 let editMode="";
 let painting=false;
@@ -483,16 +577,22 @@ let lastPaintCell=null;
 
 let stream=null;
 let scanOpen=false;
+let winOpen=false;
 
 let viewMode="top";
-let selectingStart=false;
+let selectionMode="";
 
 let playerX=0;
 let playerZ=0;
 let startX=0;
 let startZ=0;
-let yaw=0;
 
+let endX=0;
+let endZ=0;
+let hasEnd=false;
+let hasStart=false;
+
+let yaw=0;
 let orbitYaw=.7;
 let orbitPitch=.95;
 let orbitDistance=30;
@@ -517,9 +617,9 @@ function scanMessage(message){
   $("scanMessage").textContent=message;
 }
 
-// ====================================
-// Three.js 3D 世界
-// ====================================
+// =======================================
+// THREE.JS 世界
+// =======================================
 
 const scene=new THREE.Scene();
 scene.background=new THREE.Color("#cdeaff");
@@ -535,6 +635,7 @@ const renderer=new THREE.WebGLRenderer({
 renderer.setPixelRatio(
   Math.min(window.devicePixelRatio||1,2)
 );
+
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 
 $("world").appendChild(renderer.domElement);
@@ -558,83 +659,183 @@ const floor=new THREE.Mesh(
 floor.position.y=-.1;
 scene.add(floor);
 
-// 暫時使用藍色測試角色
+// 暫時的藍色探索角色
 const player=new THREE.Mesh(
   new THREE.SphereGeometry(.28,20,16),
   new THREE.MeshStandardMaterial({
     color:0x5477ef
   })
 );
-player.position.y=.38;
 scene.add(player);
 
-const marker=new THREE.Mesh(
+const playerMarker=new THREE.Mesh(
   new THREE.ConeGeometry(.25,.6,4),
   new THREE.MeshStandardMaterial({
     color:0xffb74f
   })
 );
-marker.rotation.x=Math.PI/2;
-marker.position.y=.42;
-scene.add(marker);
+playerMarker.rotation.x=Math.PI/2;
+scene.add(playerMarker);
+
+// 起點圓環
+const startMarker=new THREE.Mesh(
+  new THREE.TorusGeometry(.38,.055,8,32),
+  new THREE.MeshBasicMaterial({
+    color:0x4b80ff
+  })
+);
+startMarker.rotation.x=-Math.PI/2;
+startMarker.visible=false;
+scene.add(startMarker);
+
+// 終點旗幟
+const endGroup=new THREE.Group();
+
+const flagPole=new THREE.Mesh(
+  new THREE.CylinderGeometry(.035,.035,1.7,10),
+  new THREE.MeshStandardMaterial({
+    color:0xf8f8f8
+  })
+);
+flagPole.position.y=.85;
+endGroup.add(flagPole);
+
+const flagShape=new THREE.Shape();
+flagShape.moveTo(0,0);
+flagShape.lineTo(.7,.18);
+flagShape.lineTo(0,.5);
+flagShape.closePath();
+
+const flagGeometry=new THREE.ShapeGeometry(flagShape);
+
+const flag=new THREE.Mesh(
+  flagGeometry,
+  new THREE.MeshStandardMaterial({
+    color:0xff6376,
+    side:THREE.DoubleSide
+  })
+);
+flag.position.set(0,1.05,0);
+endGroup.add(flag);
+
+const endRing=new THREE.Mesh(
+  new THREE.TorusGeometry(.43,.07,8,32),
+  new THREE.MeshBasicMaterial({
+    color:0xffc43d
+  })
+);
+endRing.rotation.x=-Math.PI/2;
+endRing.position.y=.035;
+endGroup.add(endRing);
+
+endGroup.visible=false;
+scene.add(endGroup);
+
+// =======================================
+// PLUS-PLUS 立體模型
+// =======================================
+
+// Plus-Plus 造型採用程式化近似輪廓。
+// 與實體積木相似，但不代表精確掃描出
+// 每一顆真實積木的角度與接合方式。
+
+function makePlusShape(){
+  const s=new THREE.Shape();
+
+  // 具有上下、左右突出端與凹槽的
+  // 近似 Plus-Plus 拼接輪廓。
+  const points=[
+    [-.18,-.50],
+    [ .18,-.50],
+    [ .18,-.29],
+    [ .30,-.29],
+    [ .30,-.48],
+    [ .49,-.48],
+    [ .49,-.16],
+    [ .30,-.16],
+    [ .30, .16],
+    [ .49, .16],
+    [ .49, .48],
+    [ .30, .48],
+    [ .30, .29],
+    [ .18, .29],
+    [ .18, .50],
+    [-.18, .50],
+    [-.18, .29],
+    [-.30, .29],
+    [-.30, .48],
+    [-.49, .48],
+    [-.49, .16],
+    [-.30, .16],
+    [-.30,-.16],
+    [-.49,-.16],
+    [-.49,-.48],
+    [-.30,-.48],
+    [-.30,-.29],
+    [-.18,-.29]
+  ];
+
+  s.moveTo(points[0][0],points[0][1]);
+
+  for(let i=1;i<points.length;i++){
+    s.lineTo(points[i][0],points[i][1]);
+  }
+
+  s.closePath();
+  return s;
+}
+
+const plusShape=makePlusShape();
+
+const plusGeometry=new THREE.ExtrudeGeometry(
+  plusShape,{
+    depth:.17,
+    bevelEnabled:true,
+    bevelThickness:.025,
+    bevelSize:.025,
+    bevelSegments:1,
+    steps:1,
+    curveSegments:1
+  }
+);
+
+plusGeometry.computeVertexNormals();
+
+// 用於牆面裝飾的共享模型
+const plusMaterial=new THREE.MeshStandardMaterial({
+  color:0xffffff,
+  roughness:.6,
+  metalness:0
+});
 
 let mazeGroup=new THREE.Group();
 scene.add(mazeGroup);
+
 let mazeResources=[];
 
-// ====================================
-// 積木拼接紋理
-// ====================================
+function disposeMaze(){
+  scene.remove(mazeGroup);
 
-function createBrickTexture(){
-  const canvas=document.createElement("canvas");
-  canvas.width=128;
-  canvas.height=256;
-
-  const ctx=canvas.getContext("2d");
-  ctx.fillStyle="#fff";
-  ctx.fillRect(0,0,128,256);
-
-  for(let y=0;y<256;y+=32){
-    ctx.fillStyle="#a7a7a7";
-    ctx.fillRect(0,y,128,3);
-
-    ctx.fillStyle="#eee";
-    ctx.fillRect(0,y+3,128,3);
+  for(const resource of mazeResources){
+    resource.dispose();
   }
 
-  for(let row=0;row<8;row++){
-    const shift=(row%2)*32;
-
-    for(let x=-64+shift;x<160;x+=64){
-      const y=row*32;
-
-      ctx.fillStyle="#b5b5b5";
-      ctx.fillRect(x,y,3,32);
-
-      ctx.fillStyle="#eee";
-      ctx.fillRect(x+3,y+4,2,24);
-    }
-  }
-
-  const texture=new THREE.CanvasTexture(canvas);
-  texture.colorSpace=THREE.SRGBColorSpace;
-  texture.wrapS=THREE.RepeatWrapping;
-  texture.wrapT=THREE.RepeatWrapping;
-
-  return texture;
+  mazeResources=[];
+  mazeGroup=new THREE.Group();
+  scene.add(mazeGroup);
 }
 
-const brickTexture=createBrickTexture();
-
-// ====================================
+// =======================================
 // 掃描視窗
-// ====================================
+// =======================================
 
 function openScan(){
+  if(winOpen)closeWin();
+
   scanOpen=true;
   resetJoystick();
   keys.clear();
+
   $("scanModal").classList.add("open");
 
   if(!hasPhoto){
@@ -651,11 +852,12 @@ function closeScan(){
 $("cameraBubble").onclick=openScan;
 $("closeScan").onclick=closeScan;
 
-// ====================================
-// 照片畫布
-// ====================================
+// =======================================
+// 照片載入
+// =======================================
 
 const scanCanvas=$("scanCanvas");
+
 const scanCtx=scanCanvas.getContext("2d",{
   willReadFrequently:true
 });
@@ -669,31 +871,30 @@ const sourceCtx=sourceCanvas.getContext("2d",{
 });
 
 function loadImage(image){
-  const imageWidth=
+  const w0=
     image.videoWidth||
     image.naturalWidth||
     image.width;
 
-  const imageHeight=
+  const h0=
     image.videoHeight||
     image.naturalHeight||
     image.height;
 
-  if(!imageWidth||!imageHeight){
+  if(!w0||!h0){
     scanMessage("無法取得照片尺寸。");
     return;
   }
 
-  sourceCtx.fillStyle="#fff";
+  sourceCtx.fillStyle="#ffffff";
   sourceCtx.fillRect(0,0,480,480);
 
   const scale=Math.min(
-    480/imageWidth,
-    480/imageHeight
+    480/w0,480/h0
   );
 
-  const w=imageWidth*scale;
-  const h=imageHeight*scale;
+  const w=w0*scale;
+  const h=h0*scale;
 
   sourceCtx.drawImage(
     image,
@@ -732,7 +933,7 @@ $("fileInput").onchange=event=>{
   };
 
   image.onerror=()=>{
-    scanMessage("圖片載入失敗。");
+    scanMessage("照片載入失敗。");
     URL.revokeObjectURL(url);
   };
 
@@ -740,9 +941,9 @@ $("fileInput").onchange=event=>{
   event.target.value="";
 };
 
-// ====================================
+// =======================================
 // 相機
-// ====================================
+// =======================================
 
 async function openCamera(){
   try{
@@ -796,9 +997,9 @@ $("capture").onclick=()=>{
   closeCamera();
 };
 
-// ====================================
-// 掃描辨識
-// ====================================
+// =======================================
+// 影像辨識
+// =======================================
 
 function getPixel(data,x,y){
   const p=(y*480+x)*4;
@@ -840,9 +1041,11 @@ function renderScan(){
       base.data[p]=Math.round(
         base.data[p]*(1-a)+255*a
       );
+
       base.data[p+1]=Math.round(
         base.data[p+1]*(1-a)+55*a
       );
+
       base.data[p+2]=Math.round(
         base.data[p+2]*(1-a)+65*a
       );
@@ -930,12 +1133,13 @@ function detectWalls(){
 
   mask=cleaned;
   maskReady=true;
+
   $("build").disabled=false;
 
   renderScan();
 
   scanMessage(
-    "辨識完成！紅色區域為牆壁，可補牆或擦除。"
+    "辨識完成！可補牆或擦除，再生成 3D 迷宮。"
   );
 }
 
@@ -949,9 +1153,9 @@ $("brush").oninput=event=>{
   $("brushValue").textContent=event.target.value;
 };
 
-// ====================================
-// 手動修正牆壁
-// ====================================
+// =======================================
+// 手動修正
+// =======================================
 
 function setEditMode(mode){
   editMode=mode;
@@ -1052,6 +1256,7 @@ scanCanvas.addEventListener("pointerdown",event=>{
 
   painting=true;
   lastPaintCell=null;
+
   scanCanvas.setPointerCapture(event.pointerId);
   paintAt(event);
 });
@@ -1068,19 +1273,19 @@ function stopPainting(){
 scanCanvas.addEventListener("pointerup",stopPainting);
 scanCanvas.addEventListener("pointercancel",stopPainting);
 
-// ====================================
-// 碰撞與位置
-// ====================================
+// =======================================
+// 碰撞系統
+// =======================================
 
-function isWall(gx,gy){
+function isWallIn(data,gx,gy){
   if(gx<0||gy<0||gx>=SIZE||gy>=SIZE){
     return true;
   }
 
-  return mask[gy*SIZE+gx]===1;
+  return data[gy*SIZE+gx]===1;
 }
 
-function collides(x,z){
+function collidesWith(data,x,z){
   const r=PLAYER_RADIUS;
 
   const minGX=Math.floor(
@@ -1098,7 +1303,7 @@ function collides(x,z){
 
   for(let gy=minGY;gy<=maxGY;gy++){
     for(let gx=minGX;gx<=maxGX;gx++){
-      if(!isWall(gx,gy))continue;
+      if(!isWallIn(data,gx,gy))continue;
 
       const left=gx*CELL-WORLD_SIZE/2;
       const right=left+CELL;
@@ -1124,7 +1329,11 @@ function collides(x,z){
   return false;
 }
 
-function findStart(){
+function collides(x,z){
+  return collidesWith(activeMask,x,z);
+}
+
+function findStartIn(data){
   for(let gy=SIZE-4;gy>=3;gy--){
     for(let offset=0;offset<SIZE/2;offset++){
       for(const sign of [-1,1]){
@@ -1135,7 +1344,9 @@ function findStart(){
         const x=(gx+.5)*CELL-WORLD_SIZE/2;
         const z=(gy+.5)*CELL-WORLD_SIZE/2;
 
-        if(!collides(x,z))return {x,z};
+        if(!collidesWith(data,x,z)){
+          return {x,z};
+        }
       }
     }
   }
@@ -1143,52 +1354,44 @@ function findStart(){
   return null;
 }
 
-// ====================================
-// 真實照片資料 → 3D 牆壁
-// ====================================
-
-function clearMaze(){
-  scene.remove(mazeGroup);
-
-  for(const resource of mazeResources){
-    resource.dispose();
-  }
-
-  mazeResources=[];
-  mazeGroup=new THREE.Group();
-  scene.add(mazeGroup);
-}
+// =======================================
+// V4 生成 3D 積木牆壁
+// =======================================
 
 function buildMaze(){
   if(!maskReady)return;
 
-  const start=findStart();
+  const start=findStartIn(mask);
 
   if(!start){
     scanMessage(
-      "找不到足夠寬的通道，請先擦除部分牆壁。"
+      "找不到可站立的通道，請修正牆壁。"
     );
     return;
   }
 
-  clearMaze();
-
   wallHeight=Number($("wallHeight").value);
 
-  const geometry=new THREE.BoxGeometry(
+  disposeMaze();
+
+  activeMask=new Uint8Array(mask);
+
+  // 牆體底層使用 InstancedMesh，
+  // 維持可靠碰撞與完整的迷宮輪廓。
+  const wallGeometry=new THREE.BoxGeometry(
     CELL,wallHeight,CELL
   );
+  mazeResources.push(wallGeometry);
 
-  mazeResources.push(geometry);
+  const colorGroups=new Map();
 
-  const groups=new Map();
   const quantize=value=>
     Math.min(255,Math.round(value/32)*32);
 
   for(let gy=0;gy<SIZE;gy++){
     for(let gx=0;gx<SIZE;gx++){
       const index=gy*SIZE+gx;
-      if(!mask[index])continue;
+      if(!activeMask[index])continue;
 
       const key=[
         quantize(colors[index*3]),
@@ -1196,32 +1399,31 @@ function buildMaze(){
         quantize(colors[index*3+2])
       ].join(",");
 
-      if(!groups.has(key)){
-        groups.set(key,[]);
+      if(!colorGroups.has(key)){
+        colorGroups.set(key,[]);
       }
 
-      groups.get(key).push({gx,gy});
+      colorGroups.get(key).push({gx,gy,index});
     }
   }
 
   const dummy=new THREE.Object3D();
-  let count=0;
+  let wallCount=0;
 
-  for(const [key,cells] of groups){
+  for(const [key,cells] of colorGroups){
     const [r,g,b]=key.split(",").map(Number);
 
     const material=new THREE.MeshStandardMaterial({
       color:new THREE.Color(
         `rgb(${r},${g},${b})`
       ),
-      map:brickTexture,
-      roughness:.85
+      roughness:.78
     });
 
     mazeResources.push(material);
 
     const mesh=new THREE.InstancedMesh(
-      geometry,material,cells.length
+      wallGeometry,material,cells.length
     );
 
     for(let i=0;i<cells.length;i++){
@@ -1244,30 +1446,174 @@ function buildMaze(){
     mesh.computeBoundingSphere();
     mazeGroup.add(mesh);
 
-    count+=cells.length;
+    wallCount+=cells.length;
   }
 
+  // ===================================
+  // Plus-Plus 外側立體裝飾
+  // ===================================
+
+  // 選擇可見的牆面，而不是每一格都塞模型。
+  // 這樣能降低 iPad 的 GPU 負擔。
+
+  const exposedFaces=[];
+
+  const directions=[
+    {dx:0,dy:-1,rotation:0},
+    {dx:1,dy:0,rotation:Math.PI/2},
+    {dx:0,dy:1,rotation:Math.PI},
+    {dx:-1,dy:0,rotation:-Math.PI/2}
+  ];
+
+  for(let gy=0;gy<SIZE;gy++){
+    for(let gx=0;gx<SIZE;gx++){
+      const index=gy*SIZE+gx;
+      if(!activeMask[index])continue;
+
+      for(const dir of directions){
+        const nx=gx+dir.dx;
+        const ny=gy+dir.dy;
+
+        if(
+          nx>=0&&ny>=0&&
+          nx<SIZE&&ny<SIZE&&
+          activeMask[ny*SIZE+nx]
+        ){
+          continue;
+        }
+
+        exposedFaces.push({
+          gx,gy,index,
+          dx:dir.dx,
+          dy:dir.dy,
+          rotation:dir.rotation
+        });
+      }
+    }
+  }
+
+  // 裝飾積木數量上限，保護平板效能。
+  const MAX_PLUS=12000;
+
+  const layers=Math.max(
+    2,Math.round(wallHeight/.38)
+  );
+
+  const stride=Math.max(
+    1,
+    Math.ceil(
+      exposedFaces.length*layers/MAX_PLUS
+    )
+  );
+
+  const plusInstances=[];
+
+  for(let f=0;f<exposedFaces.length;f+=stride){
+    const face=exposedFaces[f];
+
+    for(let layer=0;layer<layers;layer++){
+      plusInstances.push({face,layer});
+    }
+  }
+
+  if(plusInstances.length){
+    const plusMesh=new THREE.InstancedMesh(
+      plusGeometry,
+      plusMaterial,
+      plusInstances.length
+    );
+
+    const tempColor=new THREE.Color();
+
+    for(let i=0;i<plusInstances.length;i++){
+      const {face,layer}=plusInstances[i];
+
+      const x=
+        (face.gx+.5)*CELL-WORLD_SIZE/2;
+      const z=
+        (face.gy+.5)*CELL-WORLD_SIZE/2;
+
+      // 牆壁外側的位置
+      const offset=CELL*.52;
+
+      const px=x+face.dx*offset;
+      const pz=z+face.dy*offset;
+
+      const layerHeight=wallHeight/layers;
+      const py=(layer+.5)*layerHeight;
+
+      dummy.position.set(px,py,pz);
+
+      // 模型原本面向 +Z，
+      // 依照牆面朝向旋轉。
+      dummy.rotation.set(
+        0,face.rotation,0
+      );
+
+      // 將近似 Plus-Plus 輪廓
+      // 縮放成適合牆面的大小。
+      dummy.scale.set(
+        CELL*.92,
+        layerHeight*.94,
+        CELL*.65
+      );
+
+      dummy.updateMatrix();
+      plusMesh.setMatrixAt(i,dummy.matrix);
+
+      const index=face.index;
+
+      const r=colors[index*3]/255;
+      const g=colors[index*3+1]/255;
+      const b=colors[index*3+2]/255;
+
+      tempColor.setRGB(
+        Math.max(.08,r),
+        Math.max(.08,g),
+        Math.max(.08,b),
+        THREE.SRGBColorSpace
+      );
+
+      plusMesh.setColorAt(i,tempColor);
+    }
+
+    plusMesh.instanceMatrix.needsUpdate=true;
+
+    if(plusMesh.instanceColor){
+      plusMesh.instanceColor.needsUpdate=true;
+    }
+
+    plusMesh.computeBoundingSphere();
+    mazeGroup.add(plusMesh);
+  }
+
+  // 新迷宮建立完成
   playerX=start.x;
   playerZ=start.z;
   startX=start.x;
   startZ=start.z;
-  yaw=0;
 
+  hasStart=false;
+  hasEnd=false;
+  endGroup.visible=false;
+  startMarker.visible=false;
+
+  yaw=0;
   mazeReady=true;
 
   $("startBubble").disabled=false;
+  $("endBubble").disabled=false;
   $("resetBubble").disabled=false;
+
   $("emptyWelcome").classList.add("hidden");
 
-  // 生成成功：自動關閉掃描視窗
   closeScan();
 
-  // 立即進入選擇起點流程
   setView("top");
-  beginSelectStart();
+  beginSelection("start");
 
   status(
-    `已生成 ${count} 個牆壁單元！請選擇探索起點。`
+    `迷宮完成！${wallCount} 個牆壁單元，請設定起點。`
   );
 }
 
@@ -1277,9 +1623,9 @@ $("wallHeight").oninput=event=>{
   $("heightValue").textContent=event.target.value;
 };
 
-// ====================================
-// 自由設定起點
-// ====================================
+// =======================================
+// 自由設定起點與終點
+// =======================================
 
 const raycaster=new THREE.Raycaster();
 const pointer=new THREE.Vector2();
@@ -1287,35 +1633,56 @@ const pointer=new THREE.Vector2();
 const groundPlane=new THREE.Plane(
   new THREE.Vector3(0,1,0),0
 );
+
 const hitPoint=new THREE.Vector3();
 
-function beginSelectStart(){
+function beginSelection(mode){
   if(!mazeReady)return;
 
-  selectingStart=true;
+  selectionMode=mode;
   resetJoystick();
   keys.clear();
 
   setView("top");
 
-  $("startBubble").classList.add("active");
-  $("startBanner").classList.add("show");
+  $("startBubble").classList.toggle(
+    "active",mode==="start"
+  );
+  $("endBubble").classList.toggle(
+    "active",mode==="end"
+  );
 
-  status("請點選迷宮中的空白通道，設定探索起點。");
+  const banner=$("selectBanner");
+
+  banner.textContent=mode==="start"
+    ?"📍 點選空白通道，設定探索起點！"
+    :"🚩 點選空白通道，放置終點旗幟！";
+
+  banner.classList.add("show");
+
+  status(
+    mode==="start"
+      ?"請選擇角色出發的位置。"
+      :"請選擇迷宮終點的位置。"
+  );
 }
 
-function endSelectStart(){
-  selectingStart=false;
+function endSelection(){
+  selectionMode="";
 
   $("startBubble").classList.remove("active");
-  $("startBanner").classList.remove("show");
+  $("endBubble").classList.remove("active");
+  $("selectBanner").classList.remove("show");
 }
 
-function chooseStartAt(event){
+function choosePosition(event){
+  if(!selectionMode)return;
+
   const rect=renderer.domElement.getBoundingClientRect();
 
   pointer.x=
     ((event.clientX-rect.left)/rect.width)*2-1;
+
   pointer.y=
     -((event.clientY-rect.top)/rect.height)*2+1;
 
@@ -1332,30 +1699,84 @@ function chooseStartAt(event){
   const z=hitPoint.z;
 
   if(collides(x,z)){
-    status("這裡是牆壁或通道太窄，請換個地方。");
+    status("這裡是牆壁或通道太窄，請換個位置。");
     return;
   }
 
-  playerX=x;
-  playerZ=z;
-  startX=x;
-  startZ=z;
-  yaw=0;
+  if(selectionMode==="start"){
+    if(
+      hasEnd &&
+      Math.hypot(x-endX,z-endZ)<END_RADIUS*2
+    ){
+      status("起點和終點太近，請換個位置。");
+      return;
+    }
 
-  endSelectStart();
-  updatePlayer();
+    playerX=x;
+    playerZ=z;
+    startX=x;
+    startZ=z;
 
-  status("起點設定成功！切換第一人稱開始探索吧！");
+    hasStart=true;
+    yaw=0;
+
+    startMarker.position.set(x,.055,z);
+    startMarker.visible=true;
+
+    updatePlayer();
+    endSelection();
+
+    if(!hasEnd){
+      beginSelection("end");
+      status("起點設定成功！接著選擇終點。");
+    }else{
+      status("起點設定成功！可以開始探索。");
+    }
+
+    return;
+  }
+
+  if(selectionMode==="end"){
+    if(
+      hasStart &&
+      Math.hypot(x-startX,z-startZ)<END_RADIUS*2
+    ){
+      status("終點要離起點遠一點喔！");
+      return;
+    }
+
+    endX=x;
+    endZ=z;
+    hasEnd=true;
+
+    endGroup.position.set(x,0,z);
+    endGroup.visible=true;
+
+    endSelection();
+
+    status(
+      "終點設定成功！切換第一人稱，開始挑戰！"
+    );
+  }
 }
 
 $("startBubble").onclick=()=>{
   if(!mazeReady)return;
 
-  if(selectingStart){
-    endSelectStart();
-    status("已取消設定起點。");
+  if(selectionMode==="start"){
+    endSelection();
   }else{
-    beginSelectStart();
+    beginSelection("start");
+  }
+};
+
+$("endBubble").onclick=()=>{
+  if(!mazeReady)return;
+
+  if(selectionMode==="end"){
+    endSelection();
+  }else{
+    beginSelection("end");
   }
 };
 
@@ -1367,12 +1788,13 @@ $("resetBubble").onclick=()=>{
   yaw=0;
 
   updatePlayer();
+
   status("已回到探索起點。");
 };
 
-// ====================================
-// 視角
-// ====================================
+// =======================================
+// 三種視角
+// =======================================
 
 function setView(mode){
   viewMode=mode;
@@ -1387,8 +1809,8 @@ function setView(mode){
     "active",mode==="first"
   );
 
-  if(selectingStart&&mode!=="top"){
-    endSelectStart();
+  if(selectionMode&&mode!=="top"){
+    endSelection();
   }
 
   updateCamera();
@@ -1400,27 +1822,26 @@ $("firstView").onclick=()=>setView("first");
 
 function updatePlayer(){
   player.position.set(playerX,.38,playerZ);
-  marker.position.set(playerX,.42,playerZ);
-  marker.rotation.z=-yaw;
+  playerMarker.position.set(playerX,.42,playerZ);
+  playerMarker.rotation.z=-yaw;
 }
 
 function updateCamera(){
   const showPlayer=mazeReady&&viewMode!=="first";
 
   player.visible=showPlayer;
-  marker.visible=showPlayer;
+  playerMarker.visible=showPlayer;
 
   if(viewMode==="top"){
     camera.up.set(0,0,-1);
 
-    // 適應不同螢幕比例，盡量顯示完整迷宮。
     const aspect=Math.max(.5,camera.aspect);
     const height=Math.max(24,15/aspect);
 
     camera.position.set(
-      playerX,height,playerZ+.01
+      0,height,.01
     );
-    camera.lookAt(playerX,0,playerZ);
+    camera.lookAt(0,0,0);
   }
 
   if(viewMode==="orbit"){
@@ -1440,6 +1861,7 @@ function updateCamera(){
 
   if(viewMode==="first"){
     camera.up.set(0,1,0);
+
     camera.position.set(
       playerX,1.35,playerZ
     );
@@ -1452,9 +1874,9 @@ function updateCamera(){
   }
 }
 
-// ====================================
+// =======================================
 // 虛擬搖桿
-// ====================================
+// =======================================
 
 const joystick=$("joystick");
 const stick=$("stick");
@@ -1493,7 +1915,7 @@ function resetJoystick(){
 }
 
 joystick.addEventListener("pointerdown",event=>{
-  if(scanOpen||selectingStart)return;
+  if(scanOpen||winOpen||selectionMode)return;
 
   joystickPointer=event.pointerId;
   joystick.setPointerCapture(event.pointerId);
@@ -1514,16 +1936,18 @@ function releaseStick(event){
 
 joystick.addEventListener("pointerup",releaseStick);
 joystick.addEventListener("pointercancel",releaseStick);
-joystick.addEventListener("lostpointercapture",resetJoystick);
+joystick.addEventListener(
+  "lostpointercapture",resetJoystick
+);
 
-// ====================================
-// 世界畫面拖曳
-// ====================================
+// =======================================
+// 觸控轉向與旋轉
+// =======================================
 
 const worldCanvas=renderer.domElement;
 
 worldCanvas.addEventListener("pointerdown",event=>{
-  if(scanOpen)return;
+  if(scanOpen||winOpen)return;
 
   lookingPointer=event.pointerId;
 
@@ -1565,8 +1989,8 @@ worldCanvas.addEventListener("pointerup",event=>{
     event.clientY-downLookY
   );
 
-  if(selectingStart&&distance<10){
-    chooseStartAt(event);
+  if(selectionMode&&distance<10){
+    choosePosition(event);
   }
 
   lookingPointer=null;
@@ -1587,12 +2011,12 @@ worldCanvas.addEventListener("wheel",event=>{
   );
 },{passive:false});
 
-// ====================================
+// =======================================
 // 鍵盤
-// ====================================
+// =======================================
 
 window.addEventListener("keydown",event=>{
-  if(scanOpen)return;
+  if(scanOpen||winOpen||selectionMode)return;
 
   const key=event.key.toLowerCase();
 
@@ -1616,12 +2040,20 @@ window.addEventListener("blur",()=>{
   lookingPointer=null;
 });
 
-// ====================================
-// 移動與碰撞
-// ====================================
+// =======================================
+// 移動與抵達終點
+// =======================================
 
 function updateMovement(dt){
-  if(!mazeReady||scanOpen||selectingStart)return;
+  if(
+    !mazeReady||
+    !hasStart||
+    scanOpen||
+    winOpen||
+    selectionMode
+  ){
+    return;
+  }
 
   let forward=-joystickY;
   let sideways=joystickX;
@@ -1664,7 +2096,6 @@ function updateMovement(dt){
 
   const speed=3*dt*amount;
 
-  // 分軸碰撞，不能穿越牆壁。
   const nextX=playerX+dx*speed;
 
   if(!collides(nextX,playerZ)){
@@ -1678,11 +2109,114 @@ function updateMovement(dt){
   }
 
   updatePlayer();
+
+  // 必須真的走到終點附近，
+  // 不會只因為點選終點就過關。
+  if(hasEnd){
+    const distance=Math.hypot(
+      playerX-endX,
+      playerZ-endZ
+    );
+
+    if(distance<END_RADIUS){
+      showWin();
+    }
+  }
 }
 
-// ====================================
-// 渲染
-// ====================================
+// =======================================
+// 過關慶祝畫面
+// =======================================
+
+function makeConfetti(){
+  const container=$("confetti");
+  container.innerHTML="";
+
+  const palette=[
+    "#ffcf64",
+    "#ff6376",
+    "#5975d9",
+    "#65c9aa",
+    "#b18ae8"
+  ];
+
+  for(let i=0;i<65;i++){
+    const piece=document.createElement("div");
+    piece.className="confettiPiece";
+
+    piece.style.left=
+      `${Math.random()*100}%`;
+
+    piece.style.setProperty(
+      "--duration",
+      `${2.4+Math.random()*2.5}s`
+    );
+
+    piece.style.setProperty(
+      "--delay",
+      `${Math.random()*.8}s`
+    );
+
+    piece.style.setProperty(
+      "--rotation",
+      `${Math.random()*360}deg`
+    );
+
+    piece.style.setProperty(
+      "--color",
+      palette[i%palette.length]
+    );
+
+    container.appendChild(piece);
+  }
+}
+
+function showWin(){
+  if(winOpen)return;
+
+  winOpen=true;
+  resetJoystick();
+  keys.clear();
+
+  makeConfetti();
+
+  $("winModal").classList.add("open");
+}
+
+function closeWin(){
+  winOpen=false;
+  $("winModal").classList.remove("open");
+  $("confetti").innerHTML="";
+}
+
+$("keepExploring").onclick=()=>{
+  closeWin();
+
+  // 避免站在終點上立刻再次觸發，
+  // 先回到起點。
+  playerX=startX;
+  playerZ=startZ;
+  yaw=0;
+
+  updatePlayer();
+  status("繼續探索！你也可以重新設計迷宮。");
+};
+
+$("createAgain").onclick=()=>{
+  closeWin();
+
+  // 孩子可以重新排列實體積木，
+  // 再透過相機建立新的挑戰。
+  openScan();
+
+  scanMessage(
+    "換你出題！重新排列 Plus-Plus 積木，拍照建立新的迷宮。"
+  );
+};
+
+// =======================================
+// 動畫與渲染
+// =======================================
 
 function resize(){
   const rect=$("world").getBoundingClientRect();
@@ -1707,14 +2241,25 @@ function animate(){
   updateMovement(dt);
   updateCamera();
 
+  if(hasEnd){
+    const t=performance.now()*.001;
+
+    endRing.rotation.z=t*.5;
+    endGroup.position.y=Math.sin(t*2)*.025;
+  }
+
   renderer.render(scene,camera);
 }
 
 resize();
+updatePlayer();
 updateCamera();
+
 renderer.setAnimationLoop(animate);
 
-status("點右側 📷 相機泡泡，創造自己的迷宮！");
+status(
+  "點右側 📷 相機泡泡，創造你的 Plus-Plus 迷宮！"
+);
 
 </script>
 </body>

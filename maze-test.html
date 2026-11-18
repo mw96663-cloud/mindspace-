@@ -1,0 +1,1206 @@
+
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mindspace｜小小迷宮設計師</title>
+
+<style>
+* { box-sizing:border-box; }
+html,body {
+  margin:0;
+  width:100%;
+  height:100%;
+  font-family:Arial,"Noto Sans TC",sans-serif;
+  background:#eaf3ff;
+  color:#26364b;
+}
+button,input { font:inherit; }
+button {
+  border:0;
+  border-radius:12px;
+  padding:11px 14px;
+  background:#e2ebf8;
+  color:#26364b;
+  font-weight:bold;
+  cursor:pointer;
+}
+button.primary { background:#ffcf64; }
+button.active { background:#5975d9; color:white; }
+button:disabled { opacity:.45; cursor:not-allowed; }
+
+#app {
+  height:100dvh;
+  display:flex;
+  flex-direction:column;
+}
+header {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  padding:10px 14px;
+  background:white;
+  box-shadow:0 2px 12px #0001;
+  z-index:5;
+}
+header strong { font-size:16px; }
+#status { font-size:12px; color:#526781; }
+
+#workspace {
+  flex:1;
+  min-height:0;
+  display:grid;
+  grid-template-columns:minmax(290px,360px) 1fr;
+}
+#panel {
+  padding:14px;
+  overflow:auto;
+  background:#fff;
+  border-right:1px solid #dce5f2;
+}
+h2 { font-size:16px; margin:12px 0; }
+p,small { line-height:1.55; }
+small { color:#61738a; }
+.group { margin-bottom:16px; }
+.actions {
+  display:flex;
+  flex-wrap:wrap;
+  gap:7px;
+  margin:8px 0;
+}
+.actions button { flex:1; min-width:85px; }
+label { display:block; margin:10px 0; font-size:13px; }
+input[type="range"] { width:100%; }
+input[type="file"] { max-width:100%; }
+
+#scanWrap {
+  position:relative;
+  width:100%;
+  aspect-ratio:1;
+  background:#f2f5fa;
+  border:2px dashed #bac9dc;
+  border-radius:14px;
+  overflow:hidden;
+  touch-action:none;
+}
+#scanCanvas {
+  width:100%;
+  height:100%;
+  display:block;
+  touch-action:none;
+  cursor:crosshair;
+}
+#scanHint {
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  text-align:center;
+  padding:25px;
+  pointer-events:none;
+  color:#72839a;
+}
+#scanHint.hidden { display:none; }
+
+#worldWrap {
+  position:relative;
+  overflow:hidden;
+  min-height:0;
+  background:linear-gradient(#cceaff,#f8f0dc);
+}
+#world { position:absolute; inset:0; }
+#world canvas {
+  display:block;
+  width:100%;
+  height:100%;
+  touch-action:none;
+}
+#viewButtons {
+  position:absolute;
+  right:14px;
+  top:14px;
+  z-index:3;
+  display:flex;
+  gap:8px;
+}
+#joystick {
+  position:absolute;
+  bottom:26px;
+  left:26px;
+  width:132px;
+  height:132px;
+  border-radius:50%;
+  background:#ffffff80;
+  border:3px solid #ffffffb0;
+  z-index:3;
+  touch-action:none;
+  user-select:none;
+}
+#stick {
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:58px;
+  height:58px;
+  border-radius:50%;
+  background:#5e80d9;
+  transform:translate(-50%,-50%);
+  box-shadow:0 4px 12px #0002;
+}
+#help {
+  position:absolute;
+  bottom:15px;
+  right:15px;
+  background:#ffffffe0;
+  padding:9px 12px;
+  border-radius:12px;
+  font-size:12px;
+  max-width:220px;
+  pointer-events:none;
+}
+#cameraLayer {
+  position:fixed;
+  inset:0;
+  background:#0b1527ee;
+  display:none;
+  z-index:20;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  padding:20px;
+  gap:12px;
+}
+#cameraLayer.open { display:flex; }
+#cameraVideo {
+  width:min(90vw,650px);
+  max-height:70vh;
+  object-fit:contain;
+  background:#000;
+  border-radius:16px;
+}
+#cameraLayer .actions { justify-content:center; }
+
+@media(max-width:760px) {
+  #workspace { grid-template-columns:1fr; grid-template-rows:48% 52%; }
+  #panel { border-right:0; border-bottom:1px solid #ddd; }
+  #scanWrap { max-width:320px; margin:auto; }
+  #joystick { width:110px; height:110px; bottom:14px; left:14px; }
+  #help { max-width:155px; font-size:11px; }
+  header strong { font-size:13px; }
+}
+</style>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.185.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.185.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+
+<body>
+<div id="app">
+  <header>
+    <strong>🧩 Mindspace｜小小迷宮設計師</strong>
+    <span id="status">請拍攝或上傳積木迷宮</span>
+  </header>
+
+  <div id="workspace">
+    <aside id="panel">
+      <h2>① 拍攝實體積木迷宮</h2>
+      <div class="group">
+        <div class="actions">
+          <button id="openCamera">📷 開啟相機</button>
+          <button id="uploadButton">🖼️ 上傳照片</button>
+        </div>
+        <input id="fileInput" type="file" accept="image/*" hidden>
+        <small>
+          建議使用單色底板，從正上方拍攝。
+          確保整個迷宮都在畫面中。
+        </small>
+      </div>
+
+      <div id="scanWrap">
+        <canvas id="scanCanvas" width="480" height="480"></canvas>
+        <div id="scanHint">等待迷宮照片…</div>
+      </div>
+
+      <h2>② 辨識與修正牆壁</h2>
+      <label>
+        顏色差異敏感度：
+        <span id="thresholdValue">55</span>
+        <input id="threshold" type="range" min="15" max="140" value="55">
+      </label>
+      <label>
+        牆壁修正筆刷：
+        <span id="brushValue">3</span>
+        <input id="brush" type="range" min="1" max="10" value="3">
+      </label>
+
+      <div class="actions">
+        <button id="detect" class="primary">🔍 辨識牆壁</button>
+        <button id="addWall">➕ 補牆</button>
+        <button id="eraseWall">🧽 擦除</button>
+      </div>
+      <small>
+        辨識後，紅色半透明區域代表牆壁。
+        可以直接在照片上畫出漏掉的牆，
+        或擦除錯誤辨識的區域。
+      </small>
+
+      <h2>③ 生成自己的 3D 迷宮</h2>
+      <div class="actions">
+        <button id="build" class="primary" disabled>
+          ✨ 生成 3D 迷宮
+        </button>
+        <button id="resetPlayer" disabled>↩️ 重設位置</button>
+      </div>
+      <small>
+        生成後可用左下角搖桿移動，
+        切換俯視或第一人稱。
+      </small>
+    </aside>
+
+    <main id="worldWrap">
+      <div id="world"></div>
+
+      <div id="viewButtons">
+        <button id="topView" class="active">俯視</button>
+        <button id="firstView">第一人稱</button>
+      </div>
+
+      <div id="joystick">
+        <div id="stick"></div>
+      </div>
+
+      <div id="help">
+        搖桿：移動角色<br>
+        第一人稱：拖曳畫面轉向<br>
+        電腦：W A S D 移動
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="cameraLayer">
+  <video id="cameraVideo" autoplay playsinline muted></video>
+  <div class="actions">
+    <button id="capture" class="primary">📸 拍攝迷宮</button>
+    <button id="closeCamera">關閉相機</button>
+  </div>
+</div>
+
+<script type="module">
+import * as THREE from "three";
+
+const $ = id => document.getElementById(id);
+const status = text => { $("status").textContent = text; };
+
+const SIZE = 96;
+const WORLD_SIZE = 20;
+const CELL = WORLD_SIZE / SIZE;
+const WALL_HEIGHT = 2.5;
+const PLAYER_RADIUS = 0.20;
+
+const scanCanvas = $("scanCanvas");
+const scanCtx = scanCanvas.getContext("2d", {
+  willReadFrequently:true
+});
+
+const sourceCanvas = document.createElement("canvas");
+sourceCanvas.width = 480;
+sourceCanvas.height = 480;
+const sourceCtx = sourceCanvas.getContext("2d", {
+  willReadFrequently:true
+});
+
+let hasPhoto = false;
+let maskReady = false;
+let editMode = "";
+let painting = false;
+let mask = new Uint8Array(SIZE * SIZE);
+let colors = new Uint8Array(SIZE * SIZE * 3);
+
+let stream = null;
+let viewMode = "top";
+let yaw = 0;
+let playerX = 0;
+let playerZ = 0;
+let mazeReady = false;
+let joystickX = 0;
+let joystickY = 0;
+let joystickPointer = null;
+let lookingPointer = null;
+let lastLookX = 0;
+let lastLookY = 0;
+
+const keys = new Set();
+
+// ========== THREE.JS ==========
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color("#cdeaff");
+
+const camera = new THREE.PerspectiveCamera(
+  65, 1, 0.05, 200
+);
+
+const renderer = new THREE.WebGLRenderer({
+  antialias:true
+});
+renderer.setPixelRatio(
+  Math.min(window.devicePixelRatio,2)
+);
+$("world").appendChild(renderer.domElement);
+
+scene.add(new THREE.HemisphereLight(
+  0xffffff,0xb6a9a0,2.3
+));
+
+const sunlight = new THREE.DirectionalLight(
+  0xffffff,2.0
+);
+sunlight.position.set(8,16,10);
+scene.add(sunlight);
+
+const floor = new THREE.Mesh(
+  new THREE.BoxGeometry(WORLD_SIZE,0.2,WORLD_SIZE),
+  new THREE.MeshStandardMaterial({
+    color:0xf5e9d2,
+    roughness:0.9
+  })
+);
+floor.position.y = -0.1;
+scene.add(floor);
+
+const player = new THREE.Mesh(
+  new THREE.SphereGeometry(0.28,20,16),
+  new THREE.MeshStandardMaterial({
+    color:0x5477ef
+  })
+);
+player.position.y = 0.38;
+scene.add(player);
+
+const playerMarker = new THREE.Mesh(
+  new THREE.ConeGeometry(0.25,0.6,4),
+  new THREE.MeshStandardMaterial({
+    color:0xffb74f
+  })
+);
+playerMarker.rotation.x = Math.PI/2;
+playerMarker.position.y = 0.42;
+scene.add(playerMarker);
+
+let mazeGroup = new THREE.Group();
+scene.add(mazeGroup);
+
+// ========== 照片載入 ==========
+
+
+function loadImage(image) {
+  sourceCtx.fillStyle = "#ffffff";
+  sourceCtx.fillRect(0, 0, 480, 480);
+
+  const imageWidth =
+    image.videoWidth || image.naturalWidth || image.width;
+
+  const imageHeight =
+    image.videoHeight || image.naturalHeight || image.height;
+
+  if (!imageWidth || !imageHeight) {
+    status("無法取得照片尺寸");
+    return;
+  }
+
+  const scale = Math.min(
+    480 / imageWidth,
+    480 / imageHeight
+  );
+
+  const w = imageWidth * scale;
+  const h = imageHeight * scale;
+
+  sourceCtx.drawImage(
+    image, (480 - w) / 2, (480 - h) / 2, w, h
+  );
+
+  hasPhoto = true;
+  maskReady = false;
+  mask.fill(0);
+
+  $("scanHint").classList.add("hidden");
+  $("build").disabled = true;
+  renderScan();
+
+  status("照片已載入，請按「辨識牆壁」");
+}
+
+
+$("uploadButton").onclick = () => {
+  $("fileInput").click();
+};
+
+$("fileInput").onchange = async event => {
+  const file = event.target.files?.[0];
+  if (!file) return;
+
+  const url = URL.createObjectURL(file);
+  const image = new Image();
+
+  image.onload = () => {
+    loadImage(image);
+    URL.revokeObjectURL(url);
+  };
+
+  image.onerror = () => {
+    status("圖片載入失敗");
+    URL.revokeObjectURL(url);
+  };
+
+  image.src = url;
+  event.target.value = "";
+};
+
+// ========== 相機 ==========
+
+async function openCamera() {
+  try {
+    stream = await navigator.mediaDevices
+      .getUserMedia({
+        video:{
+          facingMode:{ideal:"environment"}
+        },
+        audio:false
+      });
+
+    $("cameraVideo").srcObject = stream;
+    $("cameraLayer").classList.add("open");
+  } catch(error) {
+    status("相機開啟失敗：" + error.message);
+  }
+}
+
+function closeCamera() {
+  if (stream) {
+    stream.getTracks().forEach(track=>track.stop());
+    stream = null;
+  }
+
+  $("cameraVideo").srcObject = null;
+  $("cameraLayer").classList.remove("open");
+}
+
+$("openCamera").onclick = openCamera;
+$("closeCamera").onclick = closeCamera;
+
+$("capture").onclick = () => {
+  const video = $("cameraVideo");
+
+  if (!video.videoWidth) {
+    status("相機尚未準備完成");
+    return;
+  }
+
+  loadImage(video);
+  closeCamera();
+};
+
+// ========== 影像辨識 ==========
+
+function renderScan() {
+  scanCtx.clearRect(0,0,480,480);
+
+  if (!hasPhoto) return;
+
+  scanCtx.drawImage(sourceCanvas,0,0);
+
+  if (!maskReady) return;
+
+  const overlay = scanCtx.createImageData(480,480);
+
+  for(let y=0;y<480;y++) {
+    for(let x=0;x<480;x++) {
+      const gx = Math.min(
+        SIZE-1,Math.floor(x/480*SIZE)
+      );
+      const gy = Math.min(
+        SIZE-1,Math.floor(y/480*SIZE)
+      );
+
+      if (!mask[gy*SIZE+gx]) continue;
+
+      const p = (y*480+x)*4;
+      overlay.data[p] = 255;
+      overlay.data[p+1] = 55;
+      overlay.data[p+2] = 65;
+      overlay.data[p+3] = 115;
+    }
+  }
+
+  scanCtx.putImageData(
+    blendOverlay(overlay),0,0
+  );
+}
+
+function blendOverlay(overlay) {
+  const base = sourceCtx.getImageData(
+    0,0,480,480
+  );
+
+  for(let i=0;i<base.data.length;i+=4) {
+    const alpha = overlay.data[i+3]/255;
+
+    if (!alpha) continue;
+
+    for(let c=0;c<3;c++) {
+      base.data[i+c] = Math.round(
+        base.data[i+c]*(1-alpha) +
+        overlay.data[i+c]*alpha
+      );
+    }
+  }
+
+  return base;
+}
+
+function getPixel(data,x,y) {
+  const p=(y*480+x)*4;
+  return [
+    data[p],
+    data[p+1],
+    data[p+2]
+  ];
+}
+
+function detectWalls() {
+  if (!hasPhoto) {
+    status("請先拍攝或上傳迷宮");
+    return;
+  }
+
+  const pixels = sourceCtx.getImageData(
+    0,0,480,480
+  ).data;
+
+  // 從四角及邊緣取樣，估計底板顏色。
+  const samples = [];
+  const positions = [
+    [10,10],[240,10],[469,10],
+    [10,240],[469,240],
+    [10,469],[240,469],[469,469]
+  ];
+
+  for(const [x,y] of positions) {
+    samples.push(getPixel(pixels,x,y));
+  }
+
+  const background = [0,1,2].map(c=>{
+    const values = samples
+      .map(s=>s[c])
+      .sort((a,b)=>a-b);
+    return values[Math.floor(values.length/2)];
+  });
+
+  const threshold = Number($("threshold").value);
+  const next = new Uint8Array(SIZE*SIZE);
+
+  for(let gy=0;gy<SIZE;gy++) {
+    for(let gx=0;gx<SIZE;gx++) {
+      const x = Math.min(
+        479,Math.floor((gx+.5)*480/SIZE)
+      );
+      const y = Math.min(
+        479,Math.floor((gy+.5)*480/SIZE)
+      );
+
+      const rgb = getPixel(pixels,x,y);
+      const index = gy*SIZE+gx;
+
+      for(let c=0;c<3;c++) {
+        colors[index*3+c] = rgb[c];
+      }
+
+      const distance = Math.sqrt(
+        (rgb[0]-background[0])**2 +
+        (rgb[1]-background[1])**2 +
+        (rgb[2]-background[2])**2
+      );
+
+      next[index] = distance>threshold ? 1:0;
+    }
+  }
+
+  // 移除孤立雜點，但保留細小的積木牆。
+  for(let gy=1;gy<SIZE-1;gy++) {
+    for(let gx=1;gx<SIZE-1;gx++) {
+      const i=gy*SIZE+gx;
+      if (!next[i]) continue;
+
+      let count=0;
+      for(let dy=-1;dy<=1;dy++) {
+        for(let dx=-1;dx<=1;dx++) {
+          count+=next[
+            (gy+dy)*SIZE+(gx+dx)
+          ];
+        }
+      }
+
+      if (count<=2) next[i]=0;
+    }
+  }
+
+  mask=next;
+  maskReady=true;
+  $("build").disabled=false;
+  renderScan();
+
+  status("辨識完成！紅色區域為牆壁，可手動修正");
+}
+
+$("detect").onclick=detectWalls;
+
+$("threshold").oninput=event=>{
+  $("thresholdValue").textContent=
+    event.target.value;
+};
+
+$("brush").oninput=event=>{
+  $("brushValue").textContent=
+    event.target.value;
+};
+
+// ========== 手動修正 ==========
+
+function setEditMode(mode) {
+  editMode=mode;
+
+  $("addWall").classList.toggle(
+    "active",mode==="add"
+  );
+  $("eraseWall").classList.toggle(
+    "active",mode==="erase"
+  );
+}
+
+$("addWall").onclick=()=>{
+  setEditMode(
+    editMode==="add"?"":"add"
+  );
+};
+
+$("eraseWall").onclick=()=>{
+  setEditMode(
+    editMode==="erase"?"":"erase"
+  );
+};
+
+function paintAt(event) {
+  if (!maskReady || !editMode) return;
+
+  const rect=scanCanvas.getBoundingClientRect();
+  const gx=Math.floor(
+    (event.clientX-rect.left)/rect.width*SIZE
+  );
+  const gy=Math.floor(
+    (event.clientY-rect.top)/rect.height*SIZE
+  );
+
+  const radius=Number($("brush").value);
+
+  for(let dy=-radius;dy<=radius;dy++) {
+    for(let dx=-radius;dx<=radius;dx++) {
+      if (dx*dx+dy*dy>radius*radius) continue;
+
+      const x=gx+dx;
+      const y=gy+dy;
+
+      if (
+        x<0 || y<0 ||
+        x>=SIZE || y>=SIZE
+      ) continue;
+
+      mask[y*SIZE+x]=editMode==="add"?1:0;
+    }
+  }
+
+  renderScan();
+}
+
+scanCanvas.addEventListener(
+  "pointerdown",event=>{
+    if (!maskReady || !editMode) return;
+    painting=true;
+    scanCanvas.setPointerCapture(event.pointerId);
+    paintAt(event);
+  }
+);
+
+scanCanvas.addEventListener(
+  "pointermove",event=>{
+    if (painting) paintAt(event);
+  }
+);
+
+function stopPainting() { painting=false; }
+
+scanCanvas.addEventListener(
+  "pointerup",stopPainting
+);
+scanCanvas.addEventListener(
+  "pointercancel",stopPainting
+);
+
+// ========== 3D 迷宮生成 ==========
+
+function disposeGroup(group) {
+  group.traverse(object=>{
+    if (!object.isMesh) return;
+
+    object.geometry?.dispose();
+
+    if (Array.isArray(object.material)) {
+      object.material.forEach(m=>m.dispose());
+    } else {
+      object.material?.dispose();
+    }
+  });
+}
+
+function isWall(gx,gy) {
+  if (
+    gx<0 || gy<0 ||
+    gx>=SIZE || gy>=SIZE
+  ) return true;
+
+  return mask[gy*SIZE+gx]===1;
+}
+
+function worldToGrid(x,z) {
+  return {
+    gx:Math.floor((x+WORLD_SIZE/2)/CELL),
+    gy:Math.floor((z+WORLD_SIZE/2)/CELL)
+  };
+}
+
+function collides(x,z) {
+  const r=PLAYER_RADIUS;
+
+  for(const dx of [-r,r]) {
+    for(const dz of [-r,r]) {
+      const {gx,gy}=worldToGrid(
+        x+dx,z+dz
+      );
+
+      if (isWall(gx,gy)) return true;
+    }
+  }
+
+  return false;
+}
+
+function findStart() {
+  // 優先尋找靠近迷宮下方中央的通道。
+  for(let gy=SIZE-4;gy>=3;gy--) {
+    for(let offset=0;offset<SIZE/2;offset++) {
+      for(const sign of [-1,1]) {
+        const gx=Math.floor(SIZE/2)+offset*sign;
+
+        if(gx<3 || gx>=SIZE-3) continue;
+
+        const x=(gx+.5)*CELL-WORLD_SIZE/2;
+        const z=(gy+.5)*CELL-WORLD_SIZE/2;
+
+        if (!collides(x,z)) {
+          return {x,z};
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function buildMaze() {
+  if (!maskReady) return;
+
+  scene.remove(mazeGroup);
+  disposeGroup(mazeGroup);
+
+  mazeGroup=new THREE.Group();
+
+  const geometry=new THREE.BoxGeometry(
+    CELL,WALL_HEIGHT,CELL
+  );
+
+  const materialCache=new Map();
+
+  function getMaterial(index) {
+    const r=colors[index*3];
+    const g=colors[index*3+1];
+    const b=colors[index*3+2];
+
+    // 色彩分組，避免產生過多材質。
+    const key=[
+      Math.round(r/32)*32,
+      Math.round(g/32)*32,
+      Math.round(b/32)*32
+    ].map(v=>Math.min(255,v)).join(",");
+
+    if (!materialCache.has(key)) {
+      const [rr,gg,bb]=key.split(",").map(Number);
+
+      materialCache.set(
+        key,
+        new THREE.MeshStandardMaterial({
+          color:new THREE.Color(
+            `rgb(${rr},${gg},${bb})`
+          ),
+          roughness:.85
+        })
+      );
+    }
+
+    return materialCache.get(key);
+  }
+
+  let count=0;
+
+  for(let gy=0;gy<SIZE;gy++) {
+    for(let gx=0;gx<SIZE;gx++) {
+      const index=gy*SIZE+gx;
+      if (!mask[index]) continue;
+
+      const wall=new THREE.Mesh(
+        geometry,getMaterial(index)
+      );
+
+      wall.position.set(
+        (gx+.5)*CELL-WORLD_SIZE/2,
+        WALL_HEIGHT/2,
+        (gy+.5)*CELL-WORLD_SIZE/2
+      );
+
+      mazeGroup.add(wall);
+      count++;
+    }
+  }
+
+  scene.add(mazeGroup);
+
+  const start=findStart();
+
+  if (!start) {
+    mazeReady=false;
+    status("找不到足夠寬的通道，請擦除部分牆壁");
+    return;
+  }
+
+  playerX=start.x;
+  playerZ=start.z;
+  yaw=0;
+  mazeReady=true;
+
+  $("resetPlayer").disabled=false;
+  updatePlayer();
+  updateCamera();
+
+  status(`3D 迷宮建立完成：${count} 個牆壁單元`);
+}
+
+$("build").onclick=buildMaze;
+
+$("resetPlayer").onclick=()=>{
+  const start=findStart();
+  if (!start) return;
+
+  playerX=start.x;
+  playerZ=start.z;
+  yaw=0;
+  updatePlayer();
+  updateCamera();
+};
+
+// ========== 視角 ==========
+
+function updatePlayer() {
+  player.position.set(
+    playerX,.38,playerZ
+  );
+
+  playerMarker.position.set(
+    playerX,.42,playerZ
+  );
+
+  playerMarker.rotation.z=-yaw;
+}
+
+function setView(mode) {
+  viewMode=mode;
+
+  $("topView").classList.toggle(
+    "active",mode==="top"
+  );
+  $("firstView").classList.toggle(
+    "active",mode==="first"
+  );
+
+  updateCamera();
+}
+
+$("topView").onclick=()=>setView("top");
+$("firstView").onclick=()=>setView("first");
+
+function updateCamera() {
+  player.visible=viewMode==="top";
+  playerMarker.visible=viewMode==="top";
+
+  if (viewMode==="top") {
+    camera.position.set(
+      playerX,24,playerZ+0.01
+    );
+
+    camera.up.set(0,0,-1);
+    camera.lookAt(playerX,0,playerZ);
+  } else {
+    camera.up.set(0,1,0);
+    camera.position.set(
+      playerX,1.35,playerZ
+    );
+
+    camera.lookAt(
+      playerX+Math.sin(yaw),
+      1.35,
+      playerZ-Math.cos(yaw)
+    );
+  }
+}
+
+// ========== 虛擬搖桿 ==========
+
+const joystick=$("joystick");
+const stick=$("stick");
+
+function moveStick(event) {
+  const rect=joystick.getBoundingClientRect();
+  const cx=rect.left+rect.width/2;
+  const cy=rect.top+rect.height/2;
+
+  let dx=event.clientX-cx;
+  let dy=event.clientY-cy;
+
+  const max=rect.width*.31;
+  const length=Math.hypot(dx,dy);
+
+  if (length>max) {
+    dx=dx/length*max;
+    dy=dy/length*max;
+  }
+
+  joystickX=dx/max;
+  joystickY=dy/max;
+
+  stick.style.left=`calc(50% + ${dx}px)`;
+  stick.style.top=`calc(50% + ${dy}px)`;
+}
+
+joystick.addEventListener(
+  "pointerdown",event=>{
+    joystickPointer=event.pointerId;
+    joystick.setPointerCapture(event.pointerId);
+    moveStick(event);
+  }
+);
+
+joystick.addEventListener(
+  "pointermove",event=>{
+    if(event.pointerId===joystickPointer) {
+      moveStick(event);
+    }
+  }
+);
+
+function releaseStick(event) {
+  if(event.pointerId!==joystickPointer) return;
+
+  joystickPointer=null;
+  joystickX=0;
+  joystickY=0;
+  stick.style.left="50%";
+  stick.style.top="50%";
+}
+
+joystick.addEventListener(
+  "pointerup",releaseStick
+);
+joystick.addEventListener(
+  "pointercancel",releaseStick
+);
+
+// ========== 第一人稱轉向 ==========
+
+renderer.domElement.addEventListener(
+  "pointerdown",event=>{
+    if(viewMode!=="first") return;
+
+    lookingPointer=event.pointerId;
+    lastLookX=event.clientX;
+
+    renderer.domElement.setPointerCapture(
+      event.pointerId
+    );
+  }
+);
+
+renderer.domElement.addEventListener(
+  "pointermove",event=>{
+    if(event.pointerId!==lookingPointer) return;
+
+    const dx=event.clientX-lastLookX;
+    yaw+=dx*.006;
+    lastLookX=event.clientX;
+  }
+);
+
+function stopLooking(event) {
+  if(event.pointerId===lookingPointer) {
+    lookingPointer=null;
+  }
+}
+
+renderer.domElement.addEventListener(
+  "pointerup",stopLooking
+);
+renderer.domElement.addEventListener(
+  "pointercancel",stopLooking
+);
+
+// ========== 鍵盤 ==========
+
+window.addEventListener("keydown",event=>{
+  const key=event.key.toLowerCase();
+
+  if(["w","a","s","d","arrowup",
+      "arrowdown","arrowleft","arrowright"]
+      .includes(key)) {
+    event.preventDefault();
+    keys.add(key);
+  }
+});
+
+window.addEventListener("keyup",event=>{
+  keys.delete(event.key.toLowerCase());
+});
+
+window.addEventListener("blur",()=>{
+  keys.clear();
+  joystickX=0;
+  joystickY=0;
+  joystickPointer=null;
+  stick.style.left="50%";
+  stick.style.top="50%";
+});
+
+// ========== 移動與碰撞 ==========
+
+function updateMovement(dt) {
+  if (!mazeReady) return;
+
+  let forward=-joystickY;
+  let sideways=joystickX;
+
+  if(keys.has("w") || keys.has("arrowup")) {
+    forward+=1;
+  }
+  if(keys.has("s") || keys.has("arrowdown")) {
+    forward-=1;
+  }
+  if(keys.has("a") || keys.has("arrowleft")) {
+    sideways-=1;
+  }
+  if(keys.has("d") || keys.has("arrowright")) {
+    sideways+=1;
+  }
+
+  const length=Math.hypot(forward,sideways);
+
+  if(length<.08) return;
+
+  const amount=Math.min(1,length);
+  forward/=length;
+  sideways/=length;
+
+  let dx,dz;
+
+  if(viewMode==="first") {
+    dx=(
+      Math.sin(yaw)*forward +
+      Math.cos(yaw)*sideways
+    );
+
+    dz=(
+      -Math.cos(yaw)*forward +
+      Math.sin(yaw)*sideways
+    );
+  } else {
+    dx=sideways;
+    dz=-forward;
+  }
+
+  const speed=3.0*dt*amount;
+
+  // 分軸碰撞，允許沿牆滑動。
+  const nextX=playerX+dx*speed;
+  if(!collides(nextX,playerZ)) {
+    playerX=nextX;
+  }
+
+  const nextZ=playerZ+dz*speed;
+  if(!collides(playerX,nextZ)) {
+    playerZ=nextZ;
+  }
+
+  updatePlayer();
+}
+
+// ========== 渲染 ==========
+
+function resize() {
+  const box=$("world").getBoundingClientRect();
+
+  if(box.width<1 || box.height<1) return;
+
+  camera.aspect=box.width/box.height;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(
+    box.width,box.height,false
+  );
+}
+
+new ResizeObserver(resize).observe(
+  $("world")
+);
+
+const clock=new THREE.Clock();
+
+function animate() {
+  const dt=Math.min(clock.getDelta(),.05);
+
+  updateMovement(dt);
+  updateCamera();
+  renderer.render(scene,camera);
+}
+
+resize();
+updateCamera();
+renderer.setAnimationLoop(animate);
+
+status("準備完成，請拍攝或上傳積木迷宮");
+</script>
+</body>
+</html>

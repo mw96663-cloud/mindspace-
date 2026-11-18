@@ -3,130 +3,278 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Mindspace｜小小迷宮設計師 V2</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mindspace｜小小迷宮設計師 V3</title>
 
 <style>
 *{box-sizing:border-box}
 html,body{
   margin:0;width:100%;height:100%;
+  overflow:hidden;
   font-family:Arial,"Noto Sans TC",sans-serif;
-  background:#eaf3ff;color:#26364b
+  color:#26364b;background:#cdeaff
 }
 button,input{font:inherit}
 button{
-  border:0;border-radius:12px;padding:11px 14px;
-  background:#e2ebf8;color:#26364b;
-  font-weight:bold;cursor:pointer
+  border:0;cursor:pointer;
+  color:#26364b;font-weight:700;
+  -webkit-tap-highlight-color:transparent
 }
-button.primary{background:#ffcf64}
-button.active{background:#5975d9;color:white}
 button:disabled{opacity:.45;cursor:not-allowed}
-#app{height:100dvh;display:flex;flex-direction:column}
-header{
-  display:flex;align-items:center;justify-content:space-between;
-  gap:8px;padding:10px 14px;background:white;
-  box-shadow:0 2px 12px #0001;z-index:5
+button:focus-visible{outline:3px solid #5277dc}
+#world{
+  position:fixed;inset:0;
+  background:linear-gradient(#cdeaff,#f5ebd6)
 }
-header strong{font-size:16px}
-#status{font-size:12px;color:#526781}
-#workspace{
-  flex:1;min-height:0;display:grid;
-  grid-template-columns:minmax(290px,360px) 1fr
-}
-#panel{
-  padding:14px;overflow:auto;background:#fff;
-  border-right:1px solid #dce5f2
-}
-h2{font-size:16px;margin:12px 0}
-small{line-height:1.55;color:#61738a}
-.group{margin-bottom:16px}
-.actions{display:flex;flex-wrap:wrap;gap:7px;margin:8px 0}
-.actions button{flex:1;min-width:85px}
-label{display:block;margin:10px 0;font-size:13px}
-input[type="range"]{width:100%}
-#scanWrap{
-  position:relative;width:100%;aspect-ratio:1;
-  background:#f2f5fa;border:2px dashed #bac9dc;
-  border-radius:14px;overflow:hidden;touch-action:none
-}
-#scanCanvas{
-  width:100%;height:100%;display:block;
-  touch-action:none;cursor:crosshair
-}
-#scanHint{
-  position:absolute;inset:0;display:grid;place-items:center;
-  text-align:center;padding:25px;pointer-events:none;
-  color:#72839a
-}
-#scanHint.hidden{display:none}
-#worldWrap{
-  position:relative;overflow:hidden;min-height:0;
-  background:linear-gradient(#cceaff,#f8f0dc)
-}
-#world{position:absolute;inset:0}
 #world canvas{
-  display:block;width:100%;height:100%;touch-action:none
+  width:100%;height:100%;display:block;
+  touch-action:none
 }
-#viewButtons{
-  position:absolute;right:14px;top:14px;
-  z-index:3;display:flex;gap:6px;flex-wrap:wrap;
-  justify-content:flex-end
+#hud{
+  position:fixed;inset:0;
+  pointer-events:none;z-index:4
 }
-#viewButtons button{padding:10px}
+#hud>*{pointer-events:auto}
+#titleBubble{
+  position:absolute;top:18px;left:18px;
+  background:#fffffff0;border-radius:20px;
+  padding:12px 18px;
+  box-shadow:0 5px 20px #32465a22;
+  font-weight:bold;font-size:15px
+}
+#status{
+  position:absolute;top:77px;left:18px;
+  max-width:min(390px,calc(100vw - 120px));
+  background:#ffffffed;
+  border-radius:15px;padding:10px 13px;
+  font-size:13px;line-height:1.55;
+  box-shadow:0 4px 15px #32465a18
+}
+#viewBar{
+  position:absolute;top:18px;right:18px;
+  display:flex;gap:7px;
+  background:#ffffffdd;padding:6px;
+  border-radius:18px
+}
+#viewBar button{
+  padding:10px 12px;border-radius:13px;
+  background:transparent;font-size:13px
+}
+#viewBar button.active{
+  background:#5975d9;color:white
+}
+#bubbleRail{
+  position:absolute;right:20px;top:50%;
+  transform:translateY(-50%);
+  display:flex;flex-direction:column;gap:14px
+}
+.bubble{
+  width:64px;height:64px;border-radius:50%;
+  background:#fffffff0;
+  box-shadow:0 6px 22px #34496930;
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:2px
+}
+.bubble .symbol{font-size:24px;line-height:1}
+.bubble .bubbleLabel{font-size:10px}
+.bubble.primary{background:#ffcf64}
+.bubble.active{background:#5975d9;color:white}
 #joystick{
-  position:absolute;bottom:26px;left:26px;
-  width:132px;height:132px;border-radius:50%;
-  background:#ffffff80;border:3px solid #ffffffb0;
-  z-index:3;touch-action:none;user-select:none
+  position:absolute;bottom:30px;left:30px;
+  width:140px;height:140px;border-radius:50%;
+  background:#ffffff7a;
+  border:3px solid #ffffffd0;
+  box-shadow:0 6px 24px #34496922;
+  touch-action:none;user-select:none
 }
 #stick{
   position:absolute;left:50%;top:50%;
-  width:58px;height:58px;border-radius:50%;
-  background:#5e80d9;transform:translate(-50%,-50%);
-  box-shadow:0 4px 12px #0002
+  width:62px;height:62px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;background:#5975d9;
+  box-shadow:0 4px 12px #243d7b55
 }
-#help{
-  position:absolute;bottom:15px;right:15px;
-  background:#ffffffe0;padding:9px 12px;
-  border-radius:12px;font-size:12px;
-  max-width:240px;pointer-events:none;
-  line-height:1.6
+#hint{
+  position:absolute;bottom:20px;right:20px;
+  background:#ffffffd9;border-radius:15px;
+  padding:9px 12px;font-size:12px;
+  line-height:1.6;max-width:220px
 }
-#startButton{
-  position:absolute;top:68px;right:14px;
-  z-index:4;background:#ffcf64
+#startBanner{
+  position:absolute;left:50%;top:100px;
+  transform:translateX(-50%);
+  padding:13px 20px;
+  border-radius:18px;
+  background:#ffdf84;
+  box-shadow:0 6px 20px #0002;
+  font-weight:bold;text-align:center;
+  display:none;max-width:80vw
 }
-#startButton.active{background:#5975d9;color:white}
-#cameraLayer{
-  position:fixed;inset:0;background:#0b1527ee;
-  display:none;z-index:20;align-items:center;
-  justify-content:center;flex-direction:column;
-  padding:20px;gap:12px
+#startBanner.show{display:block}
+#emptyWelcome{
+  position:absolute;left:50%;top:50%;
+  transform:translate(-50%,-50%);
+  background:#fffffff0;
+  border-radius:26px;
+  padding:28px 34px;
+  width:min(420px,80vw);
+  text-align:center;
+  box-shadow:0 12px 38px #34496920;
+  pointer-events:none
 }
-#cameraLayer.open{display:flex}
+#emptyWelcome h2{margin:8px 0}
+#emptyWelcome p{font-size:14px;line-height:1.8}
+.hidden{display:none!important}
+
+/* 掃描工作台：全畫面浮層 */
+#scanModal{
+  position:fixed;inset:0;z-index:20;
+  background:#18243dc9;
+  display:none;
+  align-items:center;justify-content:center;
+  padding:16px
+}
+#scanModal.open{display:flex}
+#scanCard{
+  width:min(950px,100%);
+  max-height:calc(100dvh - 32px);
+  background:#fff;border-radius:24px;
+  overflow:hidden;
+  display:flex;flex-direction:column;
+  box-shadow:0 20px 65px #0005
+}
+#scanHeader{
+  display:flex;align-items:center;
+  justify-content:space-between;
+  padding:14px 18px;border-bottom:1px solid #e3e9f3
+}
+#scanHeader strong{font-size:17px}
+#closeScan{
+  background:#edf2f9;border-radius:50%;
+  width:38px;height:38px;font-size:22px
+}
+#scanBody{
+  display:grid;
+  grid-template-columns:minmax(250px,1fr) minmax(250px,1fr);
+  gap:20px;padding:20px;
+  overflow:auto
+}
+#scanLeft,#scanRight{min-width:0}
+#scanLeft h3,#scanRight h3{
+  margin:0 0 12px;font-size:15px
+}
+#scanWrap{
+  position:relative;width:100%;
+  aspect-ratio:1;
+  background:#f3f6fa;
+  border:2px dashed #bdc9d9;
+  border-radius:16px;overflow:hidden
+}
+#scanCanvas{
+  width:100%;height:100%;
+  display:block;touch-action:none
+}
+#scanPlaceholder{
+  position:absolute;inset:0;
+  display:grid;place-items:center;
+  text-align:center;padding:20px;
+  pointer-events:none;color:#8190a2
+}
+.actionRow{
+  display:flex;flex-wrap:wrap;gap:8px;
+  margin:10px 0
+}
+.actionRow button{
+  flex:1;min-width:90px;
+  border-radius:12px;padding:12px 10px;
+  background:#eaf0fa;font-size:13px
+}
+.actionRow button.primary{background:#ffcf64}
+.actionRow button.active{
+  background:#5975d9;color:white
+}
+.actionRow button.finish{
+  background:#5975d9;color:white;
+  font-size:16px;padding:15px
+}
+.control{
+  display:block;margin:16px 0;
+  font-size:13px
+}
+.control input[type=range]{
+  display:block;width:100%;margin-top:8px
+}
+.note{
+  font-size:12px;line-height:1.7;
+  color:#61738a
+}
+#scanMessage{
+  padding:10px 12px;
+  border-radius:12px;
+  background:#f2f6fc;
+  font-size:12px;line-height:1.6;
+  margin-top:10px
+}
+
+/* 相機浮層 */
+#cameraModal{
+  position:fixed;inset:0;z-index:30;
+  background:#10192bed;
+  display:none;flex-direction:column;
+  align-items:center;justify-content:center;
+  gap:16px;padding:18px
+}
+#cameraModal.open{display:flex}
 #cameraVideo{
-  width:min(90vw,650px);max-height:70vh;
-  object-fit:contain;background:#000;border-radius:16px
+  width:min(90vw,750px);
+  max-height:72dvh;
+  object-fit:contain;
+  background:#000;border-radius:18px
 }
-#cameraLayer .actions{justify-content:center}
+#cameraModal button{
+  padding:13px 22px;border-radius:14px;
+  background:#fff
+}
+#cameraModal #capture{background:#ffcf64}
+
 @media(max-width:760px){
-  #workspace{
-    grid-template-columns:1fr;
-    grid-template-rows:48% 52%
+  #titleBubble{
+    top:10px;left:10px;padding:9px 11px;
+    font-size:12px
   }
-  #panel{
-    border-right:0;border-bottom:1px solid #ddd
+  #status{
+    top:57px;left:10px;
+    font-size:11px;max-width:240px
   }
-  #scanWrap{max-width:320px;margin:auto}
+  #viewBar{
+    top:10px;right:8px;gap:2px;padding:4px
+  }
+  #viewBar button{
+    font-size:11px;padding:8px 7px
+  }
+  #bubbleRail{right:12px;gap:10px}
+  .bubble{width:54px;height:54px}
+  .bubble .symbol{font-size:21px}
   #joystick{
-    width:110px;height:110px;bottom:14px;left:14px
+    left:14px;bottom:18px;
+    width:115px;height:115px
   }
-  #help{max-width:155px;font-size:11px}
-  header strong{font-size:13px}
-  #viewButtons{left:8px;right:8px}
-  #viewButtons button{padding:8px}
-  #startButton{top:60px;right:8px}
+  #stick{width:52px;height:52px}
+  #hint{
+    right:8px;bottom:10px;
+    max-width:155px;font-size:10px
+  }
+  #startBanner{
+    top:110px;font-size:12px;
+    padding:10px 12px
+  }
+  #scanBody{
+    grid-template-columns:1fr;
+    padding:14px;gap:18px
+  }
+  #scanCard{max-height:calc(100dvh - 16px)}
+  #scanModal{padding:8px}
+  #scanWrap{max-width:340px;margin:auto}
 }
 </style>
 
@@ -140,116 +288,171 @@ input[type="range"]{width:100%}
 </head>
 
 <body>
-<div id="app">
-<header>
-  <strong>🧩 Mindspace｜小小迷宮設計師 V2</strong>
-  <span id="status">請拍攝或上傳積木迷宮</span>
-</header>
 
-<div id="workspace">
-<aside id="panel">
+<div id="world"></div>
 
-<h2>① 拍攝實體積木迷宮</h2>
-<div class="group">
-  <div class="actions">
-    <button id="openCamera">📷 開啟相機</button>
-    <button id="uploadButton">🖼️ 上傳照片</button>
+<div id="hud">
+  <div id="titleBubble">🧩 小小迷宮設計師</div>
+
+  <div id="status" role="status">
+    點右側相機泡泡，創造自己的迷宮！
   </div>
-  <input id="fileInput" type="file" accept="image/*" hidden>
-  <small>
-    建議使用單色底板，從正上方拍攝。
-    確保整個迷宮都在畫面中。
-  </small>
-</div>
 
-<div id="scanWrap">
-  <canvas id="scanCanvas" width="480" height="480"></canvas>
-  <div id="scanHint">等待迷宮照片…</div>
-</div>
-
-<h2>② 辨識與修正牆壁</h2>
-
-<label>
-  顏色差異敏感度：
-  <span id="thresholdValue">55</span>
-  <input id="threshold" type="range"
-         min="15" max="140" value="55">
-</label>
-
-<label>
-  牆壁修正筆刷：
-  <span id="brushValue">3</span>
-  <input id="brush" type="range"
-         min="1" max="10" value="3">
-</label>
-
-<div class="actions">
-  <button id="detect" class="primary">🔍 辨識牆壁</button>
-  <button id="addWall">➕ 補牆</button>
-  <button id="eraseWall">🧽 擦除</button>
-</div>
-
-<small>
-  紅色半透明區域代表牆壁。
-  可以直接在照片上補牆或擦除辨識錯誤的部分。
-</small>
-
-<h2>③ 生成自己的 3D 迷宮</h2>
-
-<div class="actions">
-  <button id="build" class="primary" disabled>
-    ✨ 生成 3D 迷宮
-  </button>
-  <button id="resetPlayer" disabled>
-    ↩️ 重設位置
-  </button>
-</div>
-
-<label>
-  牆壁高度：
-  <span id="heightValue">2.5</span>
-  <input id="wallHeight" type="range"
-         min="1.5" max="5" step=".5" value="2.5">
-</label>
-
-<small>
-  生成後可以切換俯視、立體及第一人稱。
-  點選「設定起點」，再於俯視畫面點選通道。
-</small>
-
-</aside>
-
-<main id="worldWrap">
-  <div id="world"></div>
-
-  <div id="viewButtons">
+  <div id="viewBar">
     <button id="topView" class="active">俯視</button>
-    <button id="orbitView">立體視角</button>
+    <button id="orbitView">立體</button>
     <button id="firstView">第一人稱</button>
   </div>
 
-  <button id="startButton" disabled>
-    📍 設定起點
-  </button>
+  <div id="bubbleRail">
+    <button id="cameraBubble" class="bubble primary"
+            aria-label="拍照掃描迷宮">
+      <span class="symbol">📷</span>
+      <span class="bubbleLabel">掃描</span>
+    </button>
+
+    <button id="startBubble" class="bubble"
+            aria-label="設定探索起點" disabled>
+      <span class="symbol">📍</span>
+      <span class="bubbleLabel">起點</span>
+    </button>
+
+    <button id="resetBubble" class="bubble"
+            aria-label="回到探索起點" disabled>
+      <span class="symbol">↩️</span>
+      <span class="bubbleLabel">返回</span>
+    </button>
+  </div>
 
   <div id="joystick">
     <div id="stick"></div>
   </div>
 
-  <div id="help">
-    搖桿：移動角色<br>
-    第一人稱：拖曳畫面轉向<br>
-    立體視角：拖曳旋轉觀察<br>
-    電腦：W A S D 移動
+  <div id="hint">
+    搖桿：自由移動<br>
+    第一人稱：拖曳轉向<br>
+    立體：拖曳旋轉<br>
+    電腦：W A S D
   </div>
-</main>
-</div>
+
+  <div id="startBanner">
+    📍 點選迷宮中的空白通道，決定從哪裡出發！
+  </div>
+
+  <div id="emptyWelcome">
+    <div style="font-size:42px">🧩</div>
+    <h2>創造你的迷宮世界</h2>
+    <p>
+      用 Plus-Plus 積木排列自己的迷宮，
+      點擊右邊的 📷 泡泡拍照，
+      就能走進你創造的 3D 世界！
+    </p>
+  </div>
 </div>
 
-<div id="cameraLayer">
-  <video id="cameraVideo" autoplay playsinline muted></video>
-  <div class="actions">
-    <button id="capture" class="primary">📸 拍攝迷宮</button>
+<!-- 掃描浮動工作台 -->
+<div id="scanModal" role="dialog"
+     aria-modal="true" aria-label="迷宮掃描工作台">
+
+  <div id="scanCard">
+    <div id="scanHeader">
+      <strong>📷 創造我的 3D 迷宮</strong>
+      <button id="closeScan" aria-label="關閉掃描視窗">×</button>
+    </div>
+
+    <div id="scanBody">
+      <section id="scanLeft">
+        <h3>① 拍攝實體迷宮</h3>
+
+        <div class="actionRow">
+          <button id="openCamera">📷 開啟相機</button>
+          <button id="uploadButton">🖼️ 上傳照片</button>
+        </div>
+
+        <input id="fileInput" type="file"
+               accept="image/*" hidden>
+
+        <div id="scanWrap">
+          <canvas id="scanCanvas"
+                  width="480" height="480"></canvas>
+          <div id="scanPlaceholder">
+            等待孩子創造的迷宮照片…
+          </div>
+        </div>
+
+        <p class="note">
+          建議在單色底板上平放積木，
+          並從正上方拍攝。
+        </p>
+      </section>
+
+      <section id="scanRight">
+        <h3>② 辨識與修正牆壁</h3>
+
+        <label class="control">
+          顏色差異敏感度：
+          <span id="thresholdValue">55</span>
+          <input id="threshold" type="range"
+                 min="15" max="140" value="55">
+        </label>
+
+        <div class="actionRow">
+          <button id="detect" class="primary">
+            🔍 辨識牆壁
+          </button>
+        </div>
+
+        <label class="control">
+          修正筆刷大小：
+          <span id="brushValue">3</span>
+          <input id="brush" type="range"
+                 min="1" max="10" value="3">
+        </label>
+
+        <div class="actionRow">
+          <button id="addWall">➕ 補牆</button>
+          <button id="eraseWall">🧽 擦除</button>
+        </div>
+
+        <p class="note">
+          紅色半透明區域代表辨識出的牆壁。
+          可在左側照片上補牆或擦除。
+        </p>
+
+        <h3 style="margin-top:22px">
+          ③ 進入我的迷宮世界
+        </h3>
+
+        <label class="control">
+          牆壁高度：
+          <span id="heightValue">2.5</span>
+          <input id="wallHeight" type="range"
+                 min="1.5" max="5"
+                 step=".5" value="2.5">
+        </label>
+
+        <div class="actionRow">
+          <button id="build" class="finish" disabled>
+            ✨ 生成 3D 迷宮
+          </button>
+        </div>
+
+        <div id="scanMessage">
+          先拍照，再辨識牆壁。
+          確認後就可以進入 3D 世界！
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- 即時相機 -->
+<div id="cameraModal">
+  <video id="cameraVideo"
+         autoplay playsinline muted></video>
+
+  <div class="actionRow">
+    <button id="capture">📸 拍攝迷宮</button>
     <button id="closeCamera">關閉相機</button>
   </div>
 </div>
@@ -257,91 +460,82 @@ input[type="range"]{width:100%}
 <script type="module">
 import * as THREE from "three";
 
-"use strict";
+const $=id=>document.getElementById(id);
 
-const $ = id => document.getElementById(id);
-const status = message => {
-  $("status").textContent = message;
-};
+const SIZE=96;
+const IMAGE_SIZE=480;
+const WORLD_SIZE=20;
+const CELL=WORLD_SIZE/SIZE;
+const PLAYER_RADIUS=.20;
 
-const SIZE = 96;
-const IMAGE_SIZE = 480;
-const WORLD_SIZE = 20;
-const CELL = WORLD_SIZE / SIZE;
-const PLAYER_RADIUS = .20;
+let wallHeight=2.5;
 
-let wallHeight = 2.5;
+let hasPhoto=false;
+let maskReady=false;
+let mazeReady=false;
 
-const scanCanvas = $("scanCanvas");
-const scanCtx = scanCanvas.getContext("2d",{
-  willReadFrequently:true
-});
+let mask=new Uint8Array(SIZE*SIZE);
+let colors=new Uint8Array(SIZE*SIZE*3);
 
-const sourceCanvas = document.createElement("canvas");
-sourceCanvas.width = IMAGE_SIZE;
-sourceCanvas.height = IMAGE_SIZE;
+let editMode="";
+let painting=false;
+let lastPaintCell=null;
 
-const sourceCtx = sourceCanvas.getContext("2d",{
-  willReadFrequently:true
-});
+let stream=null;
+let scanOpen=false;
 
-let hasPhoto = false;
-let maskReady = false;
-let mask = new Uint8Array(SIZE*SIZE);
-let colors = new Uint8Array(SIZE*SIZE*3);
+let viewMode="top";
+let selectingStart=false;
 
-let editMode = "";
-let painting = false;
-let lastPaintCell = null;
+let playerX=0;
+let playerZ=0;
+let startX=0;
+let startZ=0;
+let yaw=0;
 
-let stream = null;
+let orbitYaw=.7;
+let orbitPitch=.95;
+let orbitDistance=30;
 
-let mazeReady = false;
-let viewMode = "top";
-let selectingStart = false;
+let joystickX=0;
+let joystickY=0;
+let joystickPointer=null;
 
-let playerX = 0;
-let playerZ = 0;
-let startX = 0;
-let startZ = 0;
+let lookingPointer=null;
+let lastLookX=0;
+let lastLookY=0;
+let downLookX=0;
+let downLookY=0;
 
-let yaw = 0;
-let orbitYaw = .7;
-let orbitPitch = .95;
-let orbitDistance = 30;
+const keys=new Set();
 
-let joystickX = 0;
-let joystickY = 0;
-let joystickPointer = null;
+function status(message){
+  $("status").textContent=message;
+}
 
-let lookingPointer = null;
-let lastLookX = 0;
-let lastLookY = 0;
-let lastLookDownX = 0;
-let lastLookDownY = 0;
+function scanMessage(message){
+  $("scanMessage").textContent=message;
+}
 
-const keys = new Set();
+// ====================================
+// Three.js 3D 世界
+// ====================================
 
-// ========================================
-// THREE.JS 基本場景
-// ========================================
+const scene=new THREE.Scene();
+scene.background=new THREE.Color("#cdeaff");
 
-const scene = new THREE.Scene();
-scene.background = new THREE.Color("#cdeaff");
-
-const camera = new THREE.PerspectiveCamera(
+const camera=new THREE.PerspectiveCamera(
   65,1,.05,200
 );
 
-const renderer = new THREE.WebGLRenderer({
+const renderer=new THREE.WebGLRenderer({
   antialias:true
 });
 
 renderer.setPixelRatio(
-  Math.min(window.devicePixelRatio,2)
+  Math.min(window.devicePixelRatio||1,2)
 );
-
-renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
 
 $("world").appendChild(renderer.domElement);
 
@@ -349,57 +543,48 @@ scene.add(new THREE.HemisphereLight(
   0xffffff,0xb6a9a0,2.3
 ));
 
-const sunlight = new THREE.DirectionalLight(
+const sunlight=new THREE.DirectionalLight(
   0xffffff,2
 );
-
 sunlight.position.set(8,16,10);
 scene.add(sunlight);
 
-const floor = new THREE.Mesh(
+const floor=new THREE.Mesh(
   new THREE.BoxGeometry(WORLD_SIZE,.2,WORLD_SIZE),
   new THREE.MeshStandardMaterial({
-    color:0xf5e9d2,
-    roughness:.9
+    color:0xf5e9d2,roughness:.9
   })
 );
-
 floor.position.y=-.1;
 scene.add(floor);
 
-// 測試角色：後續會換成孩子自己的積木角色
-const player = new THREE.Mesh(
+// 暫時使用藍色測試角色
+const player=new THREE.Mesh(
   new THREE.SphereGeometry(.28,20,16),
   new THREE.MeshStandardMaterial({
     color:0x5477ef
   })
 );
-
 player.position.y=.38;
 scene.add(player);
 
-const playerMarker = new THREE.Mesh(
+const marker=new THREE.Mesh(
   new THREE.ConeGeometry(.25,.6,4),
   new THREE.MeshStandardMaterial({
     color:0xffb74f
   })
 );
+marker.rotation.x=Math.PI/2;
+marker.position.y=.42;
+scene.add(marker);
 
-playerMarker.rotation.x=Math.PI/2;
-playerMarker.position.y=.42;
-scene.add(playerMarker);
-
-let mazeGroup = new THREE.Group();
+let mazeGroup=new THREE.Group();
 scene.add(mazeGroup);
+let mazeResources=[];
 
-let mazeResources = [];
-
-// ========================================
-// 積木風格紋理
-// ========================================
-
-// 這是程式生成的積木拼接紋理。
-// 不是聲稱已辨識出每一顆 Plus-Plus 積木。
+// ====================================
+// 積木拼接紋理
+// ====================================
 
 function createBrickTexture(){
   const canvas=document.createElement("canvas");
@@ -407,20 +592,17 @@ function createBrickTexture(){
   canvas.height=256;
 
   const ctx=canvas.getContext("2d");
-
-  ctx.fillStyle="#ffffff";
+  ctx.fillStyle="#fff";
   ctx.fillRect(0,0,128,256);
 
-  // 水平拼接縫
   for(let y=0;y<256;y+=32){
     ctx.fillStyle="#a7a7a7";
     ctx.fillRect(0,y,128,3);
 
-    ctx.fillStyle="#eeeeee";
+    ctx.fillStyle="#eee";
     ctx.fillRect(0,y+3,128,3);
   }
 
-  // 交錯拼接縫
   for(let row=0;row<8;row++){
     const shift=(row%2)*32;
 
@@ -430,20 +612,10 @@ function createBrickTexture(){
       ctx.fillStyle="#b5b5b5";
       ctx.fillRect(x,y,3,32);
 
-      ctx.fillStyle="#eeeeee";
+      ctx.fillStyle="#eee";
       ctx.fillRect(x+3,y+4,2,24);
     }
   }
-
-  // 表面輕微凹凸線條
-  ctx.globalAlpha=.18;
-
-  for(let y=12;y<256;y+=32){
-    ctx.fillStyle="#777777";
-    ctx.fillRect(12,y,104,2);
-  }
-
-  ctx.globalAlpha=1;
 
   const texture=new THREE.CanvasTexture(canvas);
   texture.colorSpace=THREE.SRGBColorSpace;
@@ -455,9 +627,46 @@ function createBrickTexture(){
 
 const brickTexture=createBrickTexture();
 
-// ========================================
-// 照片載入
-// ========================================
+// ====================================
+// 掃描視窗
+// ====================================
+
+function openScan(){
+  scanOpen=true;
+  resetJoystick();
+  keys.clear();
+  $("scanModal").classList.add("open");
+
+  if(!hasPhoto){
+    scanMessage("先拍照或上傳迷宮照片。");
+  }
+}
+
+function closeScan(){
+  scanOpen=false;
+  $("scanModal").classList.remove("open");
+  closeCamera();
+}
+
+$("cameraBubble").onclick=openScan;
+$("closeScan").onclick=closeScan;
+
+// ====================================
+// 照片畫布
+// ====================================
+
+const scanCanvas=$("scanCanvas");
+const scanCtx=scanCanvas.getContext("2d",{
+  willReadFrequently:true
+});
+
+const sourceCanvas=document.createElement("canvas");
+sourceCanvas.width=IMAGE_SIZE;
+sourceCanvas.height=IMAGE_SIZE;
+
+const sourceCtx=sourceCanvas.getContext("2d",{
+  willReadFrequently:true
+});
 
 function loadImage(image){
   const imageWidth=
@@ -471,11 +680,11 @@ function loadImage(image){
     image.height;
 
   if(!imageWidth||!imageHeight){
-    status("無法取得照片尺寸");
+    scanMessage("無法取得照片尺寸。");
     return;
   }
 
-  sourceCtx.fillStyle="#ffffff";
+  sourceCtx.fillStyle="#fff";
   sourceCtx.fillRect(0,0,480,480);
 
   const scale=Math.min(
@@ -497,13 +706,13 @@ function loadImage(image){
   maskReady=false;
   mask.fill(0);
 
-  $("scanHint").classList.add("hidden");
+  $("scanPlaceholder").classList.add("hidden");
   $("build").disabled=true;
 
   setEditMode("");
   renderScan();
 
-  status("照片已載入，請按「辨識牆壁」");
+  scanMessage("照片已載入，請按「辨識牆壁」。");
 }
 
 $("uploadButton").onclick=()=>{
@@ -523,7 +732,7 @@ $("fileInput").onchange=event=>{
   };
 
   image.onerror=()=>{
-    status("圖片載入失敗");
+    scanMessage("圖片載入失敗。");
     URL.revokeObjectURL(url);
   };
 
@@ -531,14 +740,16 @@ $("fileInput").onchange=event=>{
   event.target.value="";
 };
 
-// ========================================
+// ====================================
 // 相機
-// ========================================
+// ====================================
 
 async function openCamera(){
   try{
     if(!navigator.mediaDevices?.getUserMedia){
-      throw new Error("瀏覽器不支援相機，或目前不是 HTTPS 網頁");
+      throw new Error(
+        "瀏覽器不支援相機，或目前不是 HTTPS 網頁"
+      );
     }
 
     stream=await navigator.mediaDevices.getUserMedia({
@@ -551,13 +762,12 @@ async function openCamera(){
     const video=$("cameraVideo");
     video.srcObject=stream;
 
-    $("cameraLayer").classList.add("open");
-
+    $("cameraModal").classList.add("open");
     await video.play();
 
   }catch(error){
     closeCamera();
-    status("相機開啟失敗："+error.message);
+    scanMessage("相機開啟失敗："+error.message);
   }
 }
 
@@ -568,7 +778,7 @@ function closeCamera(){
   }
 
   $("cameraVideo").srcObject=null;
-  $("cameraLayer").classList.remove("open");
+  $("cameraModal").classList.remove("open");
 }
 
 $("openCamera").onclick=openCamera;
@@ -578,7 +788,7 @@ $("capture").onclick=()=>{
   const video=$("cameraVideo");
 
   if(!video.videoWidth){
-    status("相機尚未準備完成");
+    scanMessage("相機尚未準備完成。");
     return;
   }
 
@@ -586,9 +796,19 @@ $("capture").onclick=()=>{
   closeCamera();
 };
 
-// ========================================
-// 顯示掃描結果
-// ========================================
+// ====================================
+// 掃描辨識
+// ====================================
+
+function getPixel(data,x,y){
+  const p=(y*480+x)*4;
+
+  return [
+    data[p],
+    data[p+1],
+    data[p+2]
+  ];
+}
 
 function renderScan(){
   scanCtx.clearRect(0,0,480,480);
@@ -608,7 +828,6 @@ function renderScan(){
       const gx=Math.min(
         SIZE-1,Math.floor(x/480*SIZE)
       );
-
       const gy=Math.min(
         SIZE-1,Math.floor(y/480*SIZE)
       );
@@ -616,18 +835,16 @@ function renderScan(){
       if(!mask[gy*SIZE+gx])continue;
 
       const p=(y*480+x)*4;
-      const alpha=.45;
+      const a=.45;
 
       base.data[p]=Math.round(
-        base.data[p]*(1-alpha)+255*alpha
+        base.data[p]*(1-a)+255*a
       );
-
       base.data[p+1]=Math.round(
-        base.data[p+1]*(1-alpha)+55*alpha
+        base.data[p+1]*(1-a)+55*a
       );
-
       base.data[p+2]=Math.round(
-        base.data[p+2]*(1-alpha)+65*alpha
+        base.data[p+2]*(1-a)+65*a
       );
     }
   }
@@ -635,23 +852,9 @@ function renderScan(){
   scanCtx.putImageData(base,0,0);
 }
 
-// ========================================
-// 影像辨識
-// ========================================
-
-function getPixel(data,x,y){
-  const p=(y*480+x)*4;
-
-  return [
-    data[p],
-    data[p+1],
-    data[p+2]
-  ];
-}
-
 function detectWalls(){
   if(!hasPhoto){
-    status("請先拍攝或上傳迷宮");
+    scanMessage("請先拍攝或上傳迷宮。");
     return;
   }
 
@@ -685,7 +888,6 @@ function detectWalls(){
       const x=Math.min(
         479,Math.floor((gx+.5)*480/SIZE)
       );
-
       const y=Math.min(
         479,Math.floor((gy+.5)*480/SIZE)
       );
@@ -707,8 +909,6 @@ function detectWalls(){
     }
   }
 
-  // 使用原始結果計算鄰居數，
-  // 避免清除順序影響其他像素。
   const cleaned=new Uint8Array(next);
 
   for(let gy=1;gy<SIZE-1;gy++){
@@ -730,12 +930,13 @@ function detectWalls(){
 
   mask=cleaned;
   maskReady=true;
-
   $("build").disabled=false;
 
   renderScan();
 
-  status("辨識完成！可補牆或擦除，再生成 3D 迷宮");
+  scanMessage(
+    "辨識完成！紅色區域為牆壁，可補牆或擦除。"
+  );
 }
 
 $("detect").onclick=detectWalls;
@@ -748,9 +949,9 @@ $("brush").oninput=event=>{
   $("brushValue").textContent=event.target.value;
 };
 
-// ========================================
-// 手動補牆與擦除
-// ========================================
+// ====================================
+// 手動修正牆壁
+// ====================================
 
 function setEditMode(mode){
   editMode=mode;
@@ -758,7 +959,6 @@ function setEditMode(mode){
   $("addWall").classList.toggle(
     "active",mode==="add"
   );
-
   $("eraseWall").classList.toggle(
     "active",mode==="erase"
   );
@@ -775,15 +975,14 @@ $("eraseWall").onclick=()=>{
 function eventToCell(event){
   const rect=scanCanvas.getBoundingClientRect();
 
-  const gx=Math.floor(
-    (event.clientX-rect.left)/rect.width*SIZE
-  );
-
-  const gy=Math.floor(
-    (event.clientY-rect.top)/rect.height*SIZE
-  );
-
-  return {gx,gy};
+  return {
+    gx:Math.floor(
+      (event.clientX-rect.left)/rect.width*SIZE
+    ),
+    gy:Math.floor(
+      (event.clientY-rect.top)/rect.height*SIZE
+    )
+  };
 }
 
 function paintCell(gx,gy){
@@ -798,21 +997,21 @@ function paintCell(gx,gy){
 
       if(x<0||y<0||x>=SIZE||y>=SIZE)continue;
 
-      mask[y*SIZE+x]=editMode==="add"?1:0;
+      const index=y*SIZE+x;
+      mask[index]=editMode==="add"?1:0;
 
-      // 補牆使用附近照片的顏色，
-      // 擦除不修改原始照片。
       if(editMode==="add"){
-        const index=y*SIZE+x;
-        const sourceIndex=gy*SIZE+gx;
+        const sx=Math.max(
+          0,Math.min(SIZE-1,gx)
+        );
+        const sy=Math.max(
+          0,Math.min(SIZE-1,gy)
+        );
+        const sourceIndex=sy*SIZE+sx;
 
-        if(
-          sourceIndex>=0 &&
-          sourceIndex<SIZE*SIZE
-        ){
-          colors[index*3]=colors[sourceIndex*3];
-          colors[index*3+1]=colors[sourceIndex*3+1];
-          colors[index*3+2]=colors[sourceIndex*3+2];
+        for(let c=0;c<3;c++){
+          colors[index*3+c]=
+            colors[sourceIndex*3+c];
         }
       }
     }
@@ -827,7 +1026,6 @@ function paintAt(event){
   if(!lastPaintCell){
     paintCell(current.gx,current.gy);
   }else{
-    // 補足快速拖曳時兩點之間的空隙。
     const dx=current.gx-lastPaintCell.gx;
     const dy=current.gy-lastPaintCell.gy;
 
@@ -854,7 +1052,6 @@ scanCanvas.addEventListener("pointerdown",event=>{
 
   painting=true;
   lastPaintCell=null;
-
   scanCanvas.setPointerCapture(event.pointerId);
   paintAt(event);
 });
@@ -871,9 +1068,9 @@ function stopPainting(){
 scanCanvas.addEventListener("pointerup",stopPainting);
 scanCanvas.addEventListener("pointercancel",stopPainting);
 
-// ========================================
-// 牆壁與碰撞
-// ========================================
+// ====================================
+// 碰撞與位置
+// ====================================
 
 function isWall(gx,gy){
   if(gx<0||gy<0||gx>=SIZE||gy>=SIZE){
@@ -883,21 +1080,21 @@ function isWall(gx,gy){
   return mask[gy*SIZE+gx]===1;
 }
 
-function worldToGrid(x,z){
-  return {
-    gx:Math.floor((x+WORLD_SIZE/2)/CELL),
-    gy:Math.floor((z+WORLD_SIZE/2)/CELL)
-  };
-}
-
 function collides(x,z){
   const r=PLAYER_RADIUS;
 
-  // 圓形角色與格狀牆壁的近似碰撞。
-  const minGX=Math.floor((x-r+WORLD_SIZE/2)/CELL);
-  const maxGX=Math.floor((x+r+WORLD_SIZE/2)/CELL);
-  const minGY=Math.floor((z-r+WORLD_SIZE/2)/CELL);
-  const maxGY=Math.floor((z+r+WORLD_SIZE/2)/CELL);
+  const minGX=Math.floor(
+    (x-r+WORLD_SIZE/2)/CELL
+  );
+  const maxGX=Math.floor(
+    (x+r+WORLD_SIZE/2)/CELL
+  );
+  const minGY=Math.floor(
+    (z-r+WORLD_SIZE/2)/CELL
+  );
+  const maxGY=Math.floor(
+    (z+r+WORLD_SIZE/2)/CELL
+  );
 
   for(let gy=minGY;gy<=maxGY;gy++){
     for(let gx=minGX;gx<=maxGX;gx++){
@@ -905,14 +1102,12 @@ function collides(x,z){
 
       const left=gx*CELL-WORLD_SIZE/2;
       const right=left+CELL;
-
       const top=gy*CELL-WORLD_SIZE/2;
       const bottom=top+CELL;
 
       const closestX=Math.max(
         left,Math.min(x,right)
       );
-
       const closestZ=Math.max(
         top,Math.min(z,bottom)
       );
@@ -940,9 +1135,7 @@ function findStart(){
         const x=(gx+.5)*CELL-WORLD_SIZE/2;
         const z=(gy+.5)*CELL-WORLD_SIZE/2;
 
-        if(!collides(x,z)){
-          return {x,z};
-        }
+        if(!collides(x,z))return {x,z};
       }
     }
   }
@@ -950,9 +1143,9 @@ function findStart(){
   return null;
 }
 
-// ========================================
-// 生成積木風格 3D 迷宮
-// ========================================
+// ====================================
+// 真實照片資料 → 3D 牆壁
+// ====================================
 
 function clearMaze(){
   scene.remove(mazeGroup);
@@ -962,7 +1155,6 @@ function clearMaze(){
   }
 
   mazeResources=[];
-
   mazeGroup=new THREE.Group();
   scene.add(mazeGroup);
 }
@@ -973,7 +1165,9 @@ function buildMaze(){
   const start=findStart();
 
   if(!start){
-    status("找不到可站立通道，請先修正牆壁");
+    scanMessage(
+      "找不到足夠寬的通道，請先擦除部分牆壁。"
+    );
     return;
   }
 
@@ -987,26 +1181,19 @@ function buildMaze(){
 
   mazeResources.push(geometry);
 
-  // 將相近顏色分組，使用 InstancedMesh，
-  // 避免一千多個獨立 Mesh 造成效能負擔。
   const groups=new Map();
+  const quantize=value=>
+    Math.min(255,Math.round(value/32)*32);
 
   for(let gy=0;gy<SIZE;gy++){
     for(let gx=0;gx<SIZE;gx++){
       const index=gy*SIZE+gx;
       if(!mask[index])continue;
 
-      const r=colors[index*3];
-      const g=colors[index*3+1];
-      const b=colors[index*3+2];
-
-      const quantize=value=>
-        Math.min(255,Math.round(value/32)*32);
-
       const key=[
-        quantize(r),
-        quantize(g),
-        quantize(b)
+        quantize(colors[index*3]),
+        quantize(colors[index*3+1]),
+        quantize(colors[index*3+2])
       ].join(",");
 
       if(!groups.has(key)){
@@ -1055,30 +1242,32 @@ function buildMaze(){
 
     mesh.instanceMatrix.needsUpdate=true;
     mesh.computeBoundingSphere();
-
     mazeGroup.add(mesh);
+
     count+=cells.length;
   }
 
   playerX=start.x;
   playerZ=start.z;
-
-  startX=playerX;
-  startZ=playerZ;
-
+  startX=start.x;
+  startZ=start.z;
   yaw=0;
+
   mazeReady=true;
-  selectingStart=false;
 
-  $("startButton").disabled=false;
-  $("startButton").classList.remove("active");
-  $("resetPlayer").disabled=false;
+  $("startBubble").disabled=false;
+  $("resetBubble").disabled=false;
+  $("emptyWelcome").classList.add("hidden");
 
-  updatePlayer();
-  updateCamera();
+  // 生成成功：自動關閉掃描視窗
+  closeScan();
+
+  // 立即進入選擇起點流程
+  setView("top");
+  beginSelectStart();
 
   status(
-    `3D 迷宮建立完成：${count} 個牆壁單元`
+    `已生成 ${count} 個牆壁單元！請選擇探索起點。`
   );
 }
 
@@ -1088,22 +1277,9 @@ $("wallHeight").oninput=event=>{
   $("heightValue").textContent=event.target.value;
 };
 
-$("resetPlayer").onclick=()=>{
-  if(!mazeReady)return;
-
-  playerX=startX;
-  playerZ=startZ;
-  yaw=0;
-
-  updatePlayer();
-  updateCamera();
-
-  status("角色已回到自己選擇的起點");
-};
-
-// ========================================
+// ====================================
 // 自由設定起點
-// ========================================
+// ====================================
 
 const raycaster=new THREE.Raycaster();
 const pointer=new THREE.Vector2();
@@ -1111,15 +1287,35 @@ const pointer=new THREE.Vector2();
 const groundPlane=new THREE.Plane(
   new THREE.Vector3(0,1,0),0
 );
-
 const hitPoint=new THREE.Vector3();
+
+function beginSelectStart(){
+  if(!mazeReady)return;
+
+  selectingStart=true;
+  resetJoystick();
+  keys.clear();
+
+  setView("top");
+
+  $("startBubble").classList.add("active");
+  $("startBanner").classList.add("show");
+
+  status("請點選迷宮中的空白通道，設定探索起點。");
+}
+
+function endSelectStart(){
+  selectingStart=false;
+
+  $("startBubble").classList.remove("active");
+  $("startBanner").classList.remove("show");
+}
 
 function chooseStartAt(event){
   const rect=renderer.domElement.getBoundingClientRect();
 
   pointer.x=
     ((event.clientX-rect.left)/rect.width)*2-1;
-
   pointer.y=
     -((event.clientY-rect.top)/rect.height)*2+1;
 
@@ -1128,7 +1324,7 @@ function chooseStartAt(event){
   if(!raycaster.ray.intersectPlane(
     groundPlane,hitPoint
   )){
-    status("請點選迷宮地板");
+    status("請點選迷宮地板。");
     return;
   }
 
@@ -1136,7 +1332,7 @@ function chooseStartAt(event){
   const z=hitPoint.z;
 
   if(collides(x,z)){
-    status("這裡是牆壁或通道太窄，請選其他起點");
+    status("這裡是牆壁或通道太窄，請換個地方。");
     return;
   }
 
@@ -1144,38 +1340,39 @@ function chooseStartAt(event){
   playerZ=z;
   startX=x;
   startZ=z;
-
   yaw=0;
-  selectingStart=false;
 
-  $("startButton").classList.remove("active");
-
+  endSelectStart();
   updatePlayer();
-  updateCamera();
 
-  status("起點設定成功！可以開始探索");
+  status("起點設定成功！切換第一人稱開始探索吧！");
 }
 
-$("startButton").onclick=()=>{
+$("startBubble").onclick=()=>{
   if(!mazeReady)return;
 
-  selectingStart=!selectingStart;
-
-  $("startButton").classList.toggle(
-    "active",selectingStart
-  );
-
   if(selectingStart){
-    setView("top");
-    status("請直接點選俯視迷宮中的空白通道");
+    endSelectStart();
+    status("已取消設定起點。");
   }else{
-    status("已取消設定起點");
+    beginSelectStart();
   }
 };
 
-// ========================================
-// 三種視角
-// ========================================
+$("resetBubble").onclick=()=>{
+  if(!mazeReady)return;
+
+  playerX=startX;
+  playerZ=startZ;
+  yaw=0;
+
+  updatePlayer();
+  status("已回到探索起點。");
+};
+
+// ====================================
+// 視角
+// ====================================
 
 function setView(mode){
   viewMode=mode;
@@ -1183,18 +1380,15 @@ function setView(mode){
   $("topView").classList.toggle(
     "active",mode==="top"
   );
-
   $("orbitView").classList.toggle(
     "active",mode==="orbit"
   );
-
   $("firstView").classList.toggle(
     "active",mode==="first"
   );
 
-  if(selectingStart && mode!=="top"){
-    selectingStart=false;
-    $("startButton").classList.remove("active");
+  if(selectingStart&&mode!=="top"){
+    endSelectStart();
   }
 
   updateCamera();
@@ -1206,35 +1400,31 @@ $("firstView").onclick=()=>setView("first");
 
 function updatePlayer(){
   player.position.set(playerX,.38,playerZ);
-
-  playerMarker.position.set(
-    playerX,.42,playerZ
-  );
-
-  playerMarker.rotation.z=-yaw;
+  marker.position.set(playerX,.42,playerZ);
+  marker.rotation.z=-yaw;
 }
 
 function updateCamera(){
-  const showPlayer=viewMode!=="first";
+  const showPlayer=mazeReady&&viewMode!=="first";
 
   player.visible=showPlayer;
-  playerMarker.visible=showPlayer;
+  marker.visible=showPlayer;
 
   if(viewMode==="top"){
     camera.up.set(0,0,-1);
 
-    camera.position.set(
-      playerX,24,playerZ+.01
-    );
+    // 適應不同螢幕比例，盡量顯示完整迷宮。
+    const aspect=Math.max(.5,camera.aspect);
+    const height=Math.max(24,15/aspect);
 
+    camera.position.set(
+      playerX,height,playerZ+.01
+    );
     camera.lookAt(playerX,0,playerZ);
   }
 
   if(viewMode==="orbit"){
     camera.up.set(0,1,0);
-
-    // 立體視角以迷宮中心為觀察目標。
-    const target=new THREE.Vector3(0,0,0);
 
     const horizontal=
       orbitDistance*Math.sin(orbitPitch);
@@ -1245,12 +1435,11 @@ function updateCamera(){
       Math.cos(orbitYaw)*horizontal
     );
 
-    camera.lookAt(target);
+    camera.lookAt(0,0,0);
   }
 
   if(viewMode==="first"){
     camera.up.set(0,1,0);
-
     camera.position.set(
       playerX,1.35,playerZ
     );
@@ -1263,9 +1452,9 @@ function updateCamera(){
   }
 }
 
-// ========================================
+// ====================================
 // 虛擬搖桿
-// ========================================
+// ====================================
 
 const joystick=$("joystick");
 const stick=$("stick");
@@ -1294,7 +1483,18 @@ function moveStick(event){
   stick.style.top=`calc(50% + ${dy}px)`;
 }
 
+function resetJoystick(){
+  joystickPointer=null;
+  joystickX=0;
+  joystickY=0;
+
+  stick.style.left="50%";
+  stick.style.top="50%";
+}
+
 joystick.addEventListener("pointerdown",event=>{
+  if(scanOpen||selectingStart)return;
+
   joystickPointer=event.pointerId;
   joystick.setPointerCapture(event.pointerId);
   moveStick(event);
@@ -1306,42 +1506,31 @@ joystick.addEventListener("pointermove",event=>{
   }
 });
 
-function resetJoystick(){
-  joystickPointer=null;
-  joystickX=0;
-  joystickY=0;
-
-  stick.style.left="50%";
-  stick.style.top="50%";
-}
-
 function releaseStick(event){
-  if(event.pointerId!==joystickPointer)return;
-  resetJoystick();
+  if(event.pointerId===joystickPointer){
+    resetJoystick();
+  }
 }
 
 joystick.addEventListener("pointerup",releaseStick);
 joystick.addEventListener("pointercancel",releaseStick);
-joystick.addEventListener("lostpointercapture",()=>{
-  resetJoystick();
-});
+joystick.addEventListener("lostpointercapture",resetJoystick);
 
-// ========================================
-// 拖曳視角
-// ========================================
+// ====================================
+// 世界畫面拖曳
+// ====================================
 
 const worldCanvas=renderer.domElement;
 
 worldCanvas.addEventListener("pointerdown",event=>{
-  if(viewMode==="top"&&!selectingStart)return;
+  if(scanOpen)return;
 
   lookingPointer=event.pointerId;
 
   lastLookX=event.clientX;
   lastLookY=event.clientY;
-
-  lastLookDownX=event.clientX;
-  lastLookDownY=event.clientY;
+  downLookX=event.clientX;
+  downLookY=event.clientY;
 
   worldCanvas.setPointerCapture(event.pointerId);
 });
@@ -1358,7 +1547,6 @@ worldCanvas.addEventListener("pointermove",event=>{
 
   if(viewMode==="orbit"){
     orbitYaw-=dx*.006;
-
     orbitPitch=Math.max(
       .25,
       Math.min(1.45,orbitPitch+dy*.006)
@@ -1373,11 +1561,11 @@ worldCanvas.addEventListener("pointerup",event=>{
   if(event.pointerId!==lookingPointer)return;
 
   const distance=Math.hypot(
-    event.clientX-lastLookDownX,
-    event.clientY-lastLookDownY
+    event.clientX-downLookX,
+    event.clientY-downLookY
   );
 
-  if(selectingStart && distance<10){
+  if(selectingStart&&distance<10){
     chooseStartAt(event);
   }
 
@@ -1388,7 +1576,6 @@ worldCanvas.addEventListener("pointercancel",()=>{
   lookingPointer=null;
 });
 
-// 立體視角可以用滑鼠滾輪縮放。
 worldCanvas.addEventListener("wheel",event=>{
   if(viewMode!=="orbit")return;
 
@@ -1400,11 +1587,13 @@ worldCanvas.addEventListener("wheel",event=>{
   );
 },{passive:false});
 
-// ========================================
+// ====================================
 // 鍵盤
-// ========================================
+// ====================================
 
 window.addEventListener("keydown",event=>{
+  if(scanOpen)return;
+
   const key=event.key.toLowerCase();
 
   if([
@@ -1427,12 +1616,12 @@ window.addEventListener("blur",()=>{
   lookingPointer=null;
 });
 
-// ========================================
-// 角色移動
-// ========================================
+// ====================================
+// 移動與碰撞
+// ====================================
 
 function updateMovement(dt){
-  if(!mazeReady||selectingStart)return;
+  if(!mazeReady||scanOpen||selectingStart)return;
 
   let forward=-joystickY;
   let sideways=joystickX;
@@ -1440,21 +1629,17 @@ function updateMovement(dt){
   if(keys.has("w")||keys.has("arrowup")){
     forward+=1;
   }
-
   if(keys.has("s")||keys.has("arrowdown")){
     forward-=1;
   }
-
   if(keys.has("a")||keys.has("arrowleft")){
     sideways-=1;
   }
-
   if(keys.has("d")||keys.has("arrowright")){
     sideways+=1;
   }
 
   const length=Math.hypot(forward,sideways);
-
   if(length<.08)return;
 
   const amount=Math.min(1,length);
@@ -1479,7 +1664,7 @@ function updateMovement(dt){
 
   const speed=3*dt*amount;
 
-  // 分軸碰撞：不能穿牆，但可沿牆滑動。
+  // 分軸碰撞，不能穿越牆壁。
   const nextX=playerX+dx*speed;
 
   if(!collides(nextX,playerZ)){
@@ -1495,9 +1680,9 @@ function updateMovement(dt){
   updatePlayer();
 }
 
-// ========================================
-// 畫面更新
-// ========================================
+// ====================================
+// 渲染
+// ====================================
 
 function resize(){
   const rect=$("world").getBoundingClientRect();
@@ -1527,10 +1712,9 @@ function animate(){
 
 resize();
 updateCamera();
-
 renderer.setAnimationLoop(animate);
 
-status("V2 準備完成，請拍攝或上傳積木迷宮");
+status("點右側 📷 相機泡泡，創造自己的迷宮！");
 
 </script>
 </body>

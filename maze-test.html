@@ -4,7 +4,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Mindspace｜小小迷宮設計師 V4</title>
+<title>Mindspace｜小小迷宮設計師 V5</title>
 
 <style>
 *{box-sizing:border-box}
@@ -42,6 +42,7 @@ button:focus-visible{outline:3px solid #5975d9}
   box-shadow:0 5px 20px #32465a22;
   font-size:15px;font-weight:bold
 }
+  
 #status{
   position:absolute;top:76px;left:16px;
   max-width:min(390px,calc(100vw - 110px));
@@ -633,6 +634,52 @@ button:focus-visible{outline:3px solid #5975d9}
     0 10px 0 #a98bba,
     0 20px 45px #130b3655;
 }
+/* =======================================
+   V5｜Firebase 雲端接力狀態
+======================================= */
+
+#relayIndicator {
+  position: absolute;
+  top: 148px;
+  left: 16px;
+
+  max-width: min(390px, calc(100vw - 110px));
+
+  padding: 9px 13px;
+
+  color: #604b80;
+  background: #fff7e8f2;
+
+  border: 2px solid #d6bde6;
+  border-radius: 14px;
+
+  font-size: 12px;
+  font-weight: 700;
+
+  box-shadow: 0 5px 15px #20113730;
+}
+
+#relayIndicator.connected {
+  color: #37624a;
+  border-color: #a3d5b1;
+  background: #f1fff3f2;
+}
+
+#relayIndicator.disconnected {
+  color: #9c4949;
+  border-color: #e9aaaa;
+  background: #fff2f0f2;
+}
+
+@media (max-width: 760px) {
+  #relayIndicator {
+    top: 125px;
+    left: 9px;
+    max-width: 220px;
+    padding: 7px 9px;
+    font-size: 10px;
+  }
+}
 </style>
 
 <script type="importmap">
@@ -656,7 +703,9 @@ button:focus-visible{outline:3px solid #5975d9}
   <div id="status" role="status">
     點擊相機泡泡，創造你的迷宮！
   </div>
-
+<div id="relayIndicator">
+  ☁️ 正在連接 Firebase…
+</div>
   <div id="viewBar">
     <button id="topView" class="active">俯視</button>
     <button id="orbitView">立體</button>
@@ -848,6 +897,202 @@ button:focus-visible{outline:3px solid #5975d9}
 <script type="module">
 import * as THREE from "three";
 
+import { initializeApp } from
+  "https://www.gstatic.com/firebasejs/12.6.0/firebase-app.js";
+
+import {
+  getAuth,
+  signInAnonymously,
+  onAuthStateChanged
+} from
+  "https://www.gstatic.com/firebasejs/12.6.0/firebase-auth.js";
+
+import {
+  getFirestore,
+  doc,
+  onSnapshot,
+  getDoc,
+  runTransaction,
+  serverTimestamp
+} from
+  "https://www.gstatic.com/firebasejs/12.6.0/firebase-firestore.js";
+
+// =======================================
+// MINDSPACE V5｜Firebase 雲端連線
+// =======================================
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDB_Z1Y-zQpu372kOryVFBDShSb3vOY7gg",
+  authDomain: "mindspace-maze-relay.firebaseapp.com",
+  projectId: "mindspace-maze-relay",
+  storageBucket: "mindspace-maze-relay.firebasestorage.app",
+  messagingSenderId: "600266323883",
+  appId: "1:600266323883:web:9b0f51d915b430cec0c4ee",
+  measurementId: "G-V724JHK2CM"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const firebaseAuth = getAuth(firebaseApp);
+const firebaseDB = getFirestore(firebaseApp);
+
+const relayDocument = doc(
+  firebaseDB,
+  "relay",
+  "current"
+);
+
+let firebaseUser = null;
+let firebaseConnected = false;
+let relayState = null;
+let unsubscribeRelay = null;
+
+let relayConnectionMessage = "正在連接雲端…";
+
+// =======================================
+// 顯示雲端狀態
+// =======================================
+
+function updateRelayIndicator(message, connected = false) {
+  relayConnectionMessage = message;
+
+  const indicator = document.getElementById(
+    "relayIndicator"
+  );
+
+  if (!indicator) return;
+
+  indicator.textContent = message;
+
+  indicator.classList.toggle(
+    "connected",
+    connected
+  );
+
+  indicator.classList.toggle(
+    "disconnected",
+    !connected
+  );
+}
+
+// =======================================
+// 監聽雲端目前接力的迷宮
+// =======================================
+
+function listenToRelay() {
+
+  if (unsubscribeRelay) {
+    unsubscribeRelay();
+    unsubscribeRelay = null;
+  }
+
+  unsubscribeRelay = onSnapshot(
+    relayDocument,
+
+    snapshot => {
+
+      firebaseConnected = true;
+
+      if (!snapshot.exists()) {
+        relayState = null;
+
+        updateRelayIndicator(
+          "☁️ 雲端已連線｜等待建立接力資料",
+          true
+        );
+
+        return;
+      }
+
+      relayState = {
+        ...snapshot.data(),
+        id: snapshot.id
+      };
+
+      console.log(
+        "[Mindspace Firebase] 接力狀態",
+        relayState
+      );
+
+      if (relayState.activeMazeId) {
+
+        updateRelayIndicator(
+          "☁️ 雲端已連線｜已有接力迷宮",
+          true
+        );
+
+      } else {
+
+        updateRelayIndicator(
+          "☁️ 雲端已連線｜等待第一位創作者",
+          true
+        );
+      }
+    },
+
+    error => {
+
+      firebaseConnected = false;
+
+      console.error(
+        "[Mindspace Firebase] 接力監聽失敗",
+        error
+      );
+
+      updateRelayIndicator(
+        "⚠️ 雲端讀取失敗：" + error.code,
+        false
+      );
+    }
+  );
+}
+
+// =======================================
+// 匿名登入
+// =======================================
+
+async function connectFirebase() {
+
+  updateRelayIndicator(
+    "☁️ 正在連接 Firebase…"
+  );
+
+  try {
+
+    const result = await signInAnonymously(
+      firebaseAuth
+    );
+
+    firebaseUser = result.user;
+
+    console.log(
+      "[Mindspace Firebase] 匿名登入成功",
+      firebaseUser.uid
+    );
+
+    updateRelayIndicator(
+      "☁️ 已登入，正在讀取迷宮…"
+    );
+
+    listenToRelay();
+
+  } catch (error) {
+
+    firebaseConnected = false;
+
+    console.error(
+      "[Mindspace Firebase] 登入失敗",
+      error
+    );
+
+    updateRelayIndicator(
+      "⚠️ Firebase 登入失敗：" + error.code
+    );
+  }
+}
+
+// 啟動真實 Firebase 連線
+connectFirebase();
+
 const $=id=>document.getElementById(id);
 
 const SIZE=96;
@@ -941,7 +1186,6 @@ renderer.setPixelRatio(
   Math.min(window.devicePixelRatio||1,2)
 );
 
-renderer.outputColorSpace=THREE.SRGBColorSpace;
 // V5｜精緻色彩與光影
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.35;
@@ -1694,262 +1938,543 @@ function findStartIn(data){
 // V4 生成 3D 積木牆壁
 // =======================================
 
-function buildMaze(){
-  if(!maskReady)return;
 
-  const start=findStartIn(mask);
+/* ==========================================
+   MINDSPACE V5
+   Plus-Plus 3D 迷宮生成系統
 
-  if(!start){
+   保留：
+   - 掃描結果與原始顏色
+   - activeMask 碰撞資料
+   - 起點與終點設定
+   - 俯視／立體／第一人稱
+   - 原本的操作與過關流程
+
+   新增：
+   - 圓潤塑膠牆體
+   - 外露牆面 Plus-Plus 積木
+   - 牆壁頂部積木
+   - 積木層次與交錯排列
+   - iPad 效能保護
+========================================== */
+
+function buildMaze() {
+
+  if (!maskReady) {
+    scanMessage("請先辨識迷宮牆壁。");
+    return;
+  }
+
+  const start = findStartIn(mask);
+
+  if (!start) {
     scanMessage(
       "找不到可站立的通道，請修正牆壁。"
     );
     return;
   }
 
-  wallHeight=Number($("wallHeight").value);
+  wallHeight = Number($("wallHeight").value);
 
+  // 清除上一座迷宮的 3D 模型
+  // 不會清除照片或目前的辨識結果
   disposeMaze();
 
-  activeMask=new Uint8Array(mask);
+  // 獨立保存碰撞資料
+  activeMask = new Uint8Array(mask);
 
-  // 牆體底層使用 InstancedMesh，
-  // 維持可靠碰撞與完整的迷宮輪廓。
-  const wallGeometry=new THREE.BoxGeometry(
-    CELL,wallHeight,CELL
-  );
-  mazeResources.push(wallGeometry);
+  const dummy = new THREE.Object3D();
+  const tempColor = new THREE.Color();
 
-  const colorGroups=new Map();
+  const wallCells = [];
+  const colorGroups = new Map();
 
-  const quantize=value=>
-    Math.min(255,Math.round(value/32)*32);
+  // 讓顏色稍微分組，減少繪圖呼叫
+  function quantizeColor(value) {
+    return Math.min(
+      255,
+      Math.round(value / 24) * 24
+    );
+  }
 
-  for(let gy=0;gy<SIZE;gy++){
-    for(let gx=0;gx<SIZE;gx++){
-      const index=gy*SIZE+gx;
-      if(!activeMask[index])continue;
+  // 從照片取出牆壁顏色
+  function getCellColor(index) {
+    const p = index * 3;
 
-      const key=[
-        quantize(colors[index*3]),
-        quantize(colors[index*3+1]),
-        quantize(colors[index*3+2])
-      ].join(",");
+    return [
+      colors[p],
+      colors[p + 1],
+      colors[p + 2]
+    ];
+  }
 
-      if(!colorGroups.has(key)){
-        colorGroups.set(key,[]);
+  function getColorKey(index) {
+    const rgb = getCellColor(index);
+
+    return [
+      quantizeColor(rgb[0]),
+      quantizeColor(rgb[1]),
+      quantizeColor(rgb[2])
+    ].join(",");
+  }
+
+  // 確認相鄰格子是不是牆壁
+  function hasWall(gx, gy) {
+    if (
+      gx < 0 ||
+      gy < 0 ||
+      gx >= SIZE ||
+      gy >= SIZE
+    ) {
+      return false;
+    }
+
+    return activeMask[gy * SIZE + gx] === 1;
+  }
+
+  // 格子轉換成 Three.js 世界座標
+  function cellPosition(gx, gy) {
+    return {
+      x: (gx + 0.5) * CELL - WORLD_SIZE / 2,
+      z: (gy + 0.5) * CELL - WORLD_SIZE / 2
+    };
+  }
+
+  // ==========================================
+  // 1. 整理所有牆壁格子
+  // ==========================================
+
+  for (let gy = 0; gy < SIZE; gy++) {
+    for (let gx = 0; gx < SIZE; gx++) {
+
+      const index = gy * SIZE + gx;
+
+      if (!activeMask[index]) continue;
+
+      const key = getColorKey(index);
+
+      const cell = {
+        gx,
+        gy,
+        index,
+        key
+      };
+
+      wallCells.push(cell);
+
+      if (!colorGroups.has(key)) {
+        colorGroups.set(key, []);
       }
 
-      colorGroups.get(key).push({gx,gy,index});
+      colorGroups.get(key).push(cell);
     }
   }
 
-  const dummy=new THREE.Object3D();
-  let wallCount=0;
+  if (wallCells.length === 0) {
+    scanMessage("沒有辨識到牆壁，請重新掃描。");
+    return;
+  }
 
-  for(const [key,cells] of colorGroups){
-    const [r,g,b]=key.split(",").map(Number);
+  // ==========================================
+  // 2. 建立圓潤塑膠牆體
+  // ==========================================
 
-    const material=new THREE.MeshStandardMaterial({
-      color:new THREE.Color(
+  // 牆體仍負責提供完整的迷宮輪廓。
+  // 表面的積木模型則提供立體拼接外觀。
+  //
+  // 這樣能維持原本碰撞系統的準確性，
+  // 也避免在 iPad 建立過多獨立物件。
+
+  const coreGeometry = new THREE.BoxGeometry(
+    CELL * 0.995,
+    wallHeight,
+    CELL * 0.995
+  );
+
+  mazeResources.push(coreGeometry);
+
+  for (const [key, cells] of colorGroups) {
+
+    const [r, g, b] = key.split(",").map(Number);
+
+    const material = new THREE.MeshPhysicalMaterial({
+      color: new THREE.Color(
         `rgb(${r},${g},${b})`
       ),
-      roughness:.78
+      roughness: 0.38,
+      metalness: 0,
+      clearcoat: 0.38,
+      clearcoatRoughness: 0.26
     });
 
     mazeResources.push(material);
 
-    const mesh=new THREE.InstancedMesh(
-      wallGeometry,material,cells.length
+    const mesh = new THREE.InstancedMesh(
+      coreGeometry,
+      material,
+      cells.length
     );
 
-    for(let i=0;i<cells.length;i++){
-      const {gx,gy}=cells[i];
+    for (let i = 0; i < cells.length; i++) {
 
-      dummy.position.set(
-        (gx+.5)*CELL-WORLD_SIZE/2,
-        wallHeight/2,
-        (gy+.5)*CELL-WORLD_SIZE/2
+      const cell = cells[i];
+
+      const pos = cellPosition(
+        cell.gx,
+        cell.gy
       );
 
-      dummy.rotation.set(0,0,0);
-      dummy.scale.set(1,1,1);
+      dummy.position.set(
+        pos.x,
+        wallHeight / 2,
+        pos.z
+      );
+
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(1, 1, 1);
       dummy.updateMatrix();
 
-      mesh.setMatrixAt(i,dummy.matrix);
+      mesh.setMatrixAt(i, dummy.matrix);
     }
 
-    mesh.instanceMatrix.needsUpdate=true;
+    mesh.instanceMatrix.needsUpdate = true;
     mesh.computeBoundingSphere();
-    mazeGroup.add(mesh);
 
-    wallCount+=cells.length;
+    mazeGroup.add(mesh);
   }
 
-  // ===================================
-  // Plus-Plus 外側立體裝飾
-  // ===================================
+  // ==========================================
+  // 3. 找出外露的牆壁表面
+  // ==========================================
 
-  // 選擇可見的牆面，而不是每一格都塞模型。
-  // 這樣能降低 iPad 的 GPU 負擔。
+  const exposedFaces = [];
 
-  const exposedFaces=[];
-
-  const directions=[
-    {dx:0,dy:-1,rotation:0},
-    {dx:1,dy:0,rotation:Math.PI/2},
-    {dx:0,dy:1,rotation:Math.PI},
-    {dx:-1,dy:0,rotation:-Math.PI/2}
+  const directions = [
+    {
+      dx: 0,
+      dy: -1,
+      rotation: Math.PI
+    },
+    {
+      dx: 1,
+      dy: 0,
+      rotation: Math.PI / 2
+    },
+    {
+      dx: 0,
+      dy: 1,
+      rotation: 0
+    },
+    {
+      dx: -1,
+      dy: 0,
+      rotation: -Math.PI / 2
+    }
   ];
 
-  for(let gy=0;gy<SIZE;gy++){
-    for(let gx=0;gx<SIZE;gx++){
-      const index=gy*SIZE+gx;
-      if(!activeMask[index])continue;
+  for (const cell of wallCells) {
 
-      for(const dir of directions){
-        const nx=gx+dir.dx;
-        const ny=gy+dir.dy;
+    for (const dir of directions) {
 
-        if(
-          nx>=0&&ny>=0&&
-          nx<SIZE&&ny<SIZE&&
-          activeMask[ny*SIZE+nx]
-        ){
-          continue;
-        }
+      const nx = cell.gx + dir.dx;
+      const ny = cell.gy + dir.dy;
 
-        exposedFaces.push({
-          gx,gy,index,
-          dx:dir.dx,
-          dy:dir.dy,
-          rotation:dir.rotation
-        });
-      }
+      if (hasWall(nx, ny)) continue;
+
+      exposedFaces.push({
+        ...cell,
+        dx: dir.dx,
+        dy: dir.dy,
+        rotation: dir.rotation
+      });
     }
   }
 
-  // 裝飾積木數量上限，保護平板效能。
-  const MAX_PLUS=12000;
+  // ==========================================
+  // 4. 設定 Plus-Plus 積木尺寸
+  // ==========================================
 
-  const layers=Math.max(
-    2,Math.round(wallHeight/.38)
+  // 牆壁高度越高，積木層數越多。
+  const layers = Math.max(
+    4,
+    Math.round(wallHeight / 0.28)
   );
 
-  const stride=Math.max(
+  const layerHeight = wallHeight / layers;
+
+  // 限制表面積木數量，避免 iPad 過載
+  const MAX_FACE_BRICKS = 11000;
+  const MAX_TOP_BRICKS = 4500;
+
+  // ==========================================
+  // 5. 建立外露牆面積木清單
+  // ==========================================
+
+  const faceStride = Math.max(
     1,
     Math.ceil(
-      exposedFaces.length*layers/MAX_PLUS
+      exposedFaces.length *
+      layers /
+      MAX_FACE_BRICKS
     )
   );
 
-  const plusInstances=[];
+  const faceBricks = [];
 
-  for(let f=0;f<exposedFaces.length;f+=stride){
-    const face=exposedFaces[f];
+  for (
+    let f = 0;
+    f < exposedFaces.length;
+    f += faceStride
+  ) {
 
-    for(let layer=0;layer<layers;layer++){
-      plusInstances.push({face,layer});
+    const face = exposedFaces[f];
+
+    for (let layer = 0; layer < layers; layer++) {
+
+      faceBricks.push({
+        face,
+        layer
+      });
     }
   }
 
-  if(plusInstances.length){
-    const plusMesh=new THREE.InstancedMesh(
+  // ==========================================
+  // 6. 生成外露牆面的 Plus-Plus 積木
+  // ==========================================
+
+  if (faceBricks.length > 0) {
+
+    const faceMesh = new THREE.InstancedMesh(
       plusGeometry,
       plusMaterial,
-      plusInstances.length
+      faceBricks.length
     );
 
-    const tempColor=new THREE.Color();
+    faceMesh.frustumCulled = false;
 
-    for(let i=0;i<plusInstances.length;i++){
-      const {face,layer}=plusInstances[i];
+    for (let i = 0; i < faceBricks.length; i++) {
 
-      const x=
-        (face.gx+.5)*CELL-WORLD_SIZE/2;
-      const z=
-        (face.gy+.5)*CELL-WORLD_SIZE/2;
+      const { face, layer } = faceBricks[i];
 
-      // 牆壁外側的位置
-      const offset=CELL*.52;
-
-      const px=x+face.dx*offset;
-      const pz=z+face.dy*offset;
-
-      const layerHeight=wallHeight/layers;
-      const py=(layer+.5)*layerHeight;
-
-      dummy.position.set(px,py,pz);
-
-      // 模型原本面向 +Z，
-      // 依照牆面朝向旋轉。
-      dummy.rotation.set(
-        0,face.rotation,0
+      const pos = cellPosition(
+        face.gx,
+        face.gy
       );
 
-      // 將近似 Plus-Plus 輪廓
-      // 縮放成適合牆面的大小。
+      // 將模型稍微推出牆壁表面
+      const offset = CELL * 0.505;
+
+      const px = pos.x + face.dx * offset;
+      const pz = pos.z + face.dy * offset;
+
+      const py = (layer + 0.5) * layerHeight;
+
+      // 奇偶層交錯，讓牆面更有拼接感
+      const stagger =
+        layer % 2 === 0 ? 0 : CELL * 0.075;
+
+      // 沿著牆面切線方向偏移
+      const tangentX = face.dy;
+      const tangentZ = -face.dx;
+
+      dummy.position.set(
+        px + tangentX * stagger,
+        py,
+        pz + tangentZ * stagger
+      );
+
+      // 模型的正面朝向外露方向
+      dummy.rotation.set(
+        0,
+        face.rotation,
+        0
+      );
+
+      // 積木比例
       dummy.scale.set(
-        CELL*.92,
-        layerHeight*.94,
-        CELL*.65
+        CELL * 0.96,
+        layerHeight * 0.95,
+        CELL * 0.38
       );
 
       dummy.updateMatrix();
-      plusMesh.setMatrixAt(i,dummy.matrix);
 
-      const index=face.index;
+      faceMesh.setMatrixAt(i, dummy.matrix);
 
-      const r=colors[index*3]/255;
-      const g=colors[index*3+1]/255;
-      const b=colors[index*3+2]/255;
+      const rgb = getCellColor(face.index);
 
       tempColor.setRGB(
-        Math.max(.08,r),
-        Math.max(.08,g),
-        Math.max(.08,b),
+        Math.max(0.07, rgb[0] / 255),
+        Math.max(0.07, rgb[1] / 255),
+        Math.max(0.07, rgb[2] / 255),
         THREE.SRGBColorSpace
       );
 
-      plusMesh.setColorAt(i,tempColor);
+      faceMesh.setColorAt(i, tempColor);
     }
 
-    plusMesh.instanceMatrix.needsUpdate=true;
+    faceMesh.instanceMatrix.needsUpdate = true;
 
-    if(plusMesh.instanceColor){
-      plusMesh.instanceColor.needsUpdate=true;
+    if (faceMesh.instanceColor) {
+      faceMesh.instanceColor.needsUpdate = true;
     }
 
-    plusMesh.computeBoundingSphere();
-    mazeGroup.add(plusMesh);
+    faceMesh.computeBoundingSphere();
+
+    mazeGroup.add(faceMesh);
   }
 
-  // 新迷宮建立完成
-  playerX=start.x;
-  playerZ=start.z;
-  startX=start.x;
-  startZ=start.z;
+  // ==========================================
+  // 7. 建立牆壁頂部的 Plus-Plus 積木
+  // ==========================================
 
-  hasStart=false;
-  hasEnd=false;
-  endGroup.visible=false;
-  startMarker.visible=false;
+  // 俯視角是這個作品的重要視角。
+  // 因此牆壁頂部也要有積木造型，
+  // 不能只讓側面有 Plus-Plus 細節。
 
-  yaw=0;
-  mazeReady=true;
+  const topStride = Math.max(
+    1,
+    Math.ceil(
+      wallCells.length / MAX_TOP_BRICKS
+    )
+  );
 
-  $("startBubble").disabled=false;
-  $("endBubble").disabled=false;
-  $("resetBubble").disabled=false;
+  const topBricks = [];
+
+  for (
+    let i = 0;
+    i < wallCells.length;
+    i += topStride
+  ) {
+    topBricks.push(wallCells[i]);
+  }
+
+  if (topBricks.length > 0) {
+
+    const topMesh = new THREE.InstancedMesh(
+      plusGeometry,
+      plusMaterial,
+      topBricks.length
+    );
+
+    topMesh.frustumCulled = false;
+
+    for (let i = 0; i < topBricks.length; i++) {
+
+      const cell = topBricks[i];
+
+      const pos = cellPosition(
+        cell.gx,
+        cell.gy
+      );
+
+      dummy.position.set(
+        pos.x,
+        wallHeight + 0.018,
+        pos.z
+      );
+
+      // 將積木從垂直平面轉成水平頂面
+      dummy.rotation.set(
+        -Math.PI / 2,
+        0,
+        0
+      );
+
+      // 部分積木旋轉 90 度，
+      // 讓頂部不會看起來完全制式。
+      if ((cell.gx + cell.gy) % 3 === 0) {
+        dummy.rotation.order = "YXZ";
+        dummy.rotation.y = Math.PI / 2;
+      } else {
+        dummy.rotation.y = 0;
+      }
+
+      dummy.scale.set(
+        CELL * 0.96,
+        CELL * 0.96,
+        CELL * 0.32
+      );
+
+      dummy.updateMatrix();
+
+      topMesh.setMatrixAt(i, dummy.matrix);
+
+      const rgb = getCellColor(cell.index);
+
+      tempColor.setRGB(
+        Math.max(0.07, rgb[0] / 255),
+        Math.max(0.07, rgb[1] / 255),
+        Math.max(0.07, rgb[2] / 255),
+        THREE.SRGBColorSpace
+      );
+
+      topMesh.setColorAt(i, tempColor);
+    }
+
+    topMesh.instanceMatrix.needsUpdate = true;
+
+    if (topMesh.instanceColor) {
+      topMesh.instanceColor.needsUpdate = true;
+    }
+
+    topMesh.computeBoundingSphere();
+
+    mazeGroup.add(topMesh);
+  }
+
+  // ==========================================
+  // 8. 重設探索角色
+  // ==========================================
+
+  playerX = start.x;
+  playerZ = start.z;
+
+  startX = start.x;
+  startZ = start.z;
+
+  hasStart = false;
+  hasEnd = false;
+
+  endGroup.visible = false;
+  startMarker.visible = false;
+
+  yaw = 0;
+
+  mazeReady = true;
+
+  // ==========================================
+  // 9. 恢復所有互動按鈕
+  // ==========================================
+
+  $("startBubble").disabled = false;
+  $("endBubble").disabled = false;
+  $("resetBubble").disabled = false;
 
   $("emptyWelcome").classList.add("hidden");
 
   closeScan();
 
+  // 預設俯視，方便設定起點
   setView("top");
+
   beginSelection("start");
 
   status(
-    `迷宮完成！${wallCount} 個牆壁單元，請設定起點。`
+    `Plus-Plus 迷宮完成！` +
+    `${wallCells.length} 個牆壁單元，` +
+    `請設定起點。`
+  );
+
+  console.log(
+    "[Mindspace V5] 迷宮生成完成",
+    {
+      wallCells: wallCells.length,
+      exposedFaces: exposedFaces.length,
+      faceBricks: faceBricks.length,
+      topBricks: topBricks.length,
+      layers
+    }
   );
 }
 

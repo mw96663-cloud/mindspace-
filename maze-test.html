@@ -680,6 +680,39 @@ button:focus-visible{outline:3px solid #5975d9}
     font-size: 10px;
   }
 }
+/* V5｜雲端發布迷宮 */
+
+#publishMaze {
+  position: absolute;
+  top: 195px;
+  left: 16px;
+  z-index: 5;
+
+  padding: 12px 18px;
+  border-radius: 16px;
+
+  color: #fff8ed;
+  background: linear-gradient(145deg, #8964c0, #503279);
+  border: 2px solid #f5d28d;
+
+  font-weight: 800;
+  font-size: 14px;
+
+  box-shadow: 0 5px 0 #38244e;
+}
+
+#publishMaze:disabled {
+  opacity: .45;
+}
+
+@media (max-width: 760px) {
+  #publishMaze {
+    top: 168px;
+    left: 9px;
+    padding: 9px 11px;
+    font-size: 11px;
+  }
+}
 </style>
 
 <script type="importmap">
@@ -706,6 +739,9 @@ button:focus-visible{outline:3px solid #5975d9}
 <div id="relayIndicator">
   ☁️ 正在連接 Firebase…
 </div>
+  <button id="publishMaze" disabled>
+  ☁️ 發布迷宮
+</button>
   <div id="viewBar">
     <button id="topView" class="active">俯視</button>
     <button id="orbitView">立體</button>
@@ -2441,7 +2477,9 @@ function buildMaze() {
 
   yaw = 0;
 
-  mazeReady = true;
+ mazeReady = true;
+mazePublished = false;
+refreshPublishButton();
 
   // ==========================================
   // 9. 恢復所有互動按鈕
@@ -2477,6 +2515,269 @@ function buildMaze() {
     }
   );
 }
+
+/* ==========================================
+   MINDSPACE V5｜Firebase 迷宮發布系統
+   第一階段：發布第一座雲端迷宮
+========================================== */
+
+let mazePublishing = false;
+let mazePublished = false;
+
+// 將 Uint8Array 壓縮為 Base64 字串
+// Firestore 儲存字串，不直接儲存 TypedArray
+function mazeBytesToBase64(bytes) {
+  let binary = "";
+
+  const chunkSize = 8192;
+
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    const chunk = bytes.subarray(
+      i,
+      i + chunkSize
+    );
+
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return btoa(binary);
+}
+
+// 檢查起點與終點是否透過通道連通
+function mazeHasValidPath() {
+  if (!hasStart || !hasEnd) return false;
+
+  if (
+    collidesWith(activeMask, startX, startZ) ||
+    collidesWith(activeMask, endX, endZ)
+  ) {
+    return false;
+  }
+
+  const toCell = (x, z) => ({
+    gx: Math.floor((x + WORLD_SIZE / 2) / CELL),
+    gy: Math.floor((z + WORLD_SIZE / 2) / CELL)
+  });
+
+  const start = toCell(startX, startZ);
+  const end = toCell(endX, endZ);
+
+  const startIndex = start.gy * SIZE + start.gx;
+  const endIndex = end.gy * SIZE + end.gx;
+
+  const visited = new Uint8Array(SIZE * SIZE);
+  const queue = [startIndex];
+
+  visited[startIndex] = 1;
+
+  let head = 0;
+
+  const directions = [
+    [1, 0],
+    [-1, 0],
+    [0, 1],
+    [0, -1]
+  ];
+
+  while (head < queue.length) {
+    const current = queue[head++];
+
+    if (current === endIndex) {
+      return true;
+    }
+
+    const gx = current % SIZE;
+    const gy = Math.floor(current / SIZE);
+
+    for (const [dx, dy] of directions) {
+      const nx = gx + dx;
+      const ny = gy + dy;
+
+      if (
+        nx < 0 || ny < 0 ||
+        nx >= SIZE || ny >= SIZE
+      ) {
+        continue;
+      }
+
+      const next = ny * SIZE + nx;
+
+      if (
+        visited[next] ||
+        activeMask[next] === 1
+      ) {
+        continue;
+      }
+
+      visited[next] = 1;
+      queue.push(next);
+    }
+  }
+
+  return false;
+}
+
+// 發布按鈕狀態
+function refreshPublishButton() {
+  const button = $("publishMaze");
+
+  if (!button) return;
+
+  button.disabled =
+    mazePublishing ||
+    mazePublished ||
+    !firebaseConnected ||
+    !firebaseUser ||
+    !mazeReady ||
+    !hasStart ||
+    !hasEnd;
+
+  if (mazePublishing) {
+    button.textContent = "☁️ 發布中…";
+  } else if (mazePublished) {
+    button.textContent = "✓ 已發布";
+  } else {
+    button.textContent = "☁️ 發布迷宮";
+  }
+}
+
+// 將目前的迷宮正式寫入 Firestore
+async function publishCurrentMaze() {
+
+  if (mazePublishing || mazePublished) return;
+
+  if (!firebaseConnected || !firebaseUser) {
+    status("雲端尚未連線，請稍後再試。");
+    return;
+  }
+
+  if (!mazeReady || !hasStart || !hasEnd) {
+    status("請先生成迷宮，並設定起點與終點。");
+    return;
+  }
+
+  if (!mazeHasValidPath()) {
+    status(
+      "起點與終點之間沒有連通的道路，請重新檢查迷宮。"
+    );
+    return;
+  }
+
+  mazePublishing = true;
+  refreshPublishButton();
+
+  try {
+
+    const mazeId = crypto.randomUUID();
+
+    const mazeRef = doc(
+      firebaseDB,
+      "mazes",
+      mazeId
+    );
+
+    const mazeData = {
+      creatorUid: firebaseUser.uid,
+
+      relayVersion: 0,
+
+      size: SIZE,
+      worldSize: WORLD_SIZE,
+
+      mask: mazeBytesToBase64(activeMask),
+      colors: mazeBytesToBase64(colors),
+
+      wallHeight,
+
+      startX,
+      startZ,
+      endX,
+      endZ,
+
+      createdAt: serverTimestamp()
+    };
+
+    // 使用交易，確保迷宮與接力狀態一起成功
+    await runTransaction(
+      firebaseDB,
+      async transaction => {
+
+        const relaySnapshot =
+          await transaction.get(relayDocument);
+
+        if (!relaySnapshot.exists()) {
+          throw new Error(
+            "找不到 relay/current 接力文件。"
+          );
+        }
+
+        const current = relaySnapshot.data();
+
+        // 本階段只允許發布第一座迷宮
+        // 後續再加入過關後接力資格
+        if (current.activeMazeId) {
+          throw new Error(
+            "雲端已有接力迷宮，請先完成上一位孩子的挑戰。"
+          );
+        }
+
+        const nextVersion =
+          Number(current.version || 0) + 1;
+
+        mazeData.relayVersion = nextVersion;
+
+        transaction.set(
+          mazeRef,
+          mazeData
+        );
+
+        transaction.update(
+          relayDocument,
+          {
+            activeMazeId: mazeId,
+            status: "active",
+            version: nextVersion,
+            updatedAt: serverTimestamp()
+          }
+        );
+      }
+    );
+
+    mazePublished = true;
+
+    status(
+      "🎉 發布成功！你的迷宮已儲存到 Firebase 雲端。"
+    );
+
+    console.log(
+      "[Mindspace V5] 迷宮發布成功",
+      mazeId
+    );
+
+  } catch (error) {
+
+    console.error(
+      "[Mindspace V5] 迷宮發布失敗",
+      error
+    );
+
+    status(
+      "發布失敗：" +
+      (error.message || "未知錯誤")
+    );
+
+  } finally {
+
+    mazePublishing = false;
+    refreshPublishButton();
+  }
+}
+
+$("publishMaze").onclick = publishCurrentMaze;
+
+// 定期同步按鈕狀態
+// 不影響原本的 3D 動畫與操作
+setInterval(refreshPublishButton, 500);
 
 $("build").onclick=buildMaze;
 

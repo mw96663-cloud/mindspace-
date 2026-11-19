@@ -1040,10 +1040,12 @@ function listenToRelay() {
       }
 
       relayState = {
-        ...snapshot.data(),
-        id: snapshot.id
-      };
+  ...snapshot.data(),
+  id: snapshot.id
+};
 
+// 新增：收到雲端更新後，自動處理迷宮接力
+handleCloudRelayChange();
       console.log(
         "[Mindspace Firebase] 接力狀態",
         relayState
@@ -1445,16 +1447,26 @@ function disposeMaze(){
 // 掃描視窗
 // =======================================
 
-function openScan(){
-  if(winOpen)closeWin();
+function openScan() {
 
-  scanOpen=true;
+  // 尚未完成上一位孩子的迷宮，不可創作
+  if (
+    !firstCreatorMode &&
+    !cloudChallengePassed
+  ) {
+    status("🔒 請先完成上一位孩子的迷宮！");
+    return;
+  }
+
+  if (winOpen) closeWin();
+
+  scanOpen = true;
   resetJoystick();
   keys.clear();
 
   $("scanModal").classList.add("open");
 
-  if(!hasPhoto){
+  if (!hasPhoto) {
     scanMessage("先拍照或上傳迷宮照片。");
   }
 }
@@ -1465,7 +1477,24 @@ function closeScan(){
   closeCamera();
 }
 
-$("cameraBubble").onclick=openScan;
+$("cameraBubble").onclick = () => {
+  if (
+    !firstCreatorMode &&
+    !cloudChallengePassed
+  ) {
+    status("🔒 請先完成上一位孩子的迷宮！");
+    return;
+  }
+
+  if (cloudChallengePassed) {
+    creatingRelayMaze = true;
+    cloudChallengeMode = false;
+    mazePublished = false;
+  }
+
+  openScan();
+  refreshPublishButton();
+};
 $("closeScan").onclick=closeScan;
 
 // =======================================
@@ -2524,6 +2553,281 @@ refreshPublishButton();
 let mazePublishing = false;
 let mazePublished = false;
 
+/* ==========================================
+   V5｜雲端迷宮下載、還原、挑戰資格
+========================================== */
+
+// 目前正在挑戰的雲端迷宮
+let currentCloudMazeId = "";
+
+// 本次創作所接續的上一座迷宮
+let challengeSourceMazeId = "";
+
+// 是否正在載入雲端迷宮
+let cloudMazeLoading = false;
+
+// 是否正在挑戰別人的迷宮
+let cloudChallengeMode = false;
+
+// 是否已完成上一座迷宮
+let cloudChallengePassed = false;
+
+// 是否正在創作下一座迷宮
+let creatingRelayMaze = false;
+
+// 避免重複載入同一座迷宮
+let lastLoadedCloudMazeId = "";
+
+// 只有第一次進入、尚無雲端迷宮時可自由創作
+let firstCreatorMode = false;
+
+// 將 Firestore Base64 還原為 Uint8Array
+function mazeBase64ToBytes(base64, expectedLength) {
+  if (typeof base64 !== "string") {
+    throw new Error("雲端迷宮資料格式不正確");
+  }
+
+  const binary = atob(base64);
+
+  if (binary.length !== expectedLength) {
+    throw new Error("雲端迷宮資料長度不正確");
+  }
+
+  const result = new Uint8Array(expectedLength);
+
+  for (let i = 0; i < binary.length; i++) {
+    result[i] = binary.charCodeAt(i);
+  }
+
+  return result;
+}
+
+// 更新創作與起終點操作權限
+function refreshRelayControls() {
+  const mayCreate =
+    firebaseConnected &&
+    !cloudMazeLoading &&
+    (
+      firstCreatorMode ||
+      cloudChallengePassed
+    );
+
+  $("cameraBubble").disabled =
+    !mayCreate || mazePublishing;
+
+  // 雲端挑戰中的起點、終點不可修改
+  if (cloudChallengeMode) {
+    $("startBubble").disabled = true;
+    $("endBubble").disabled = true;
+  }
+}
+
+// 將雲端迷宮還原為原本的 Three.js 世界
+async function loadCloudMaze(mazeId) {
+  if (!mazeId) return;
+
+  cloudMazeLoading = true;
+  refreshRelayControls();
+
+  status("☁️ 正在下載上一位孩子的迷宮…");
+
+  try {
+    const mazeRef = doc(firebaseDB, "mazes", mazeId);
+    const snapshot = await getDoc(mazeRef);
+
+    if (!snapshot.exists()) {
+      throw new Error("找不到雲端迷宮資料");
+    }
+
+    const data = snapshot.data();
+
+    if (
+      data.size !== SIZE ||
+      data.worldSize !== WORLD_SIZE
+    ) {
+      throw new Error("雲端迷宮尺寸與目前版本不相容");
+    }
+
+    const loadedMask = mazeBase64ToBytes(
+      data.mask,
+      SIZE * SIZE
+    );
+
+    const loadedColors = mazeBase64ToBytes(
+      data.colors,
+      SIZE * SIZE * 3
+    );
+
+    const coordinates = [
+      data.startX, data.startZ,
+      data.endX, data.endZ
+    ];
+
+    if (
+      !coordinates.every(Number.isFinite) ||
+      !Number.isFinite(data.wallHeight) ||
+      data.wallHeight < 1.5 ||
+      data.wallHeight > 5
+    ) {
+      throw new Error("雲端迷宮座標或高度無效");
+    }
+
+    // 避免下載期間另一位孩子已經交棒
+    if (relayState?.activeMazeId !== mazeId) {
+      return;
+    }
+
+    // 使用原本的 3D 生成函式
+    mask = loadedMask;
+    colors = loadedColors;
+    maskReady = true;
+
+    $("wallHeight").value = String(data.wallHeight);
+    $("heightValue").textContent = String(data.wallHeight);
+
+    buildMaze();
+
+    if (!mazeReady) {
+      throw new Error("雲端迷宮無法生成");
+    }
+
+    // buildMaze 預設會要求重新選起終點
+    // 雲端挑戰模式改為使用原作者設定的位置
+    endSelection();
+
+    startX = data.startX;
+    startZ = data.startZ;
+    endX = data.endX;
+    endZ = data.endZ;
+
+    playerX = startX;
+    playerZ = startZ;
+    yaw = 0;
+
+    hasStart = true;
+    hasEnd = true;
+
+    startMarker.position.set(startX, .055, startZ);
+    startMarker.visible = true;
+
+    endGroup.position.set(endX, 0, endZ);
+    endGroup.visible = true;
+
+    updatePlayer();
+
+    currentCloudMazeId = mazeId;
+    challengeSourceMazeId = mazeId;
+    lastLoadedCloudMazeId = mazeId;
+
+    cloudChallengeMode = true;
+    cloudChallengePassed = false;
+    creatingRelayMaze = false;
+    firstCreatorMode = false;
+
+    // 挑戰者不可直接發布原作者的迷宮
+    mazePublished = true;
+
+    $("startBubble").disabled = true;
+    $("endBubble").disabled = true;
+    $("resetBubble").disabled = false;
+
+    setView("top");
+
+    status(
+      "🧩 接力挑戰開始！先走到終點，" +
+      "才能解鎖自己的迷宮創作。"
+    );
+
+    console.log(
+      "[Mindspace V5] 雲端迷宮載入成功",
+      mazeId
+    );
+
+  } catch (error) {
+    console.error(
+      "[Mindspace V5] 雲端迷宮載入失敗",
+      error
+    );
+
+    status(
+      "⚠️ 無法載入雲端迷宮：" + error.message
+    );
+
+  } finally {
+    cloudMazeLoading = false;
+    refreshRelayControls();
+    refreshPublishButton();
+  }
+}
+
+// Firestore relay/current 發生變化時呼叫
+async function handleCloudRelayChange() {
+  if (!relayState) return;
+
+  // 發布交易進行中，不重新載入迷宮
+  if (mazePublishing) return;
+  const activeId = relayState.activeMazeId || "";
+
+  if (!activeId) {
+    firstCreatorMode = true;
+    cloudChallengeMode = false;
+    cloudChallengePassed = false;
+    creatingRelayMaze = false;
+    currentCloudMazeId = "";
+    challengeSourceMazeId = "";
+    lastLoadedCloudMazeId = "";
+
+    refreshRelayControls();
+    refreshPublishButton();
+    return;
+  }
+
+  firstCreatorMode = false;
+
+  // 自己剛發布的作品，不重新覆蓋當前畫面
+  if (
+    mazePublished &&
+    !cloudChallengeMode &&
+    !creatingRelayMaze &&
+    currentCloudMazeId === activeId
+  ) {
+    refreshRelayControls();
+    return;
+  }
+
+  if (lastLoadedCloudMazeId === activeId) {
+    refreshRelayControls();
+    return;
+  }
+
+  // 只要雲端換成新的迷宮，就以新接力為準
+  cloudChallengePassed = false;
+  creatingRelayMaze = false;
+
+  await loadCloudMaze(activeId);
+}
+
+// 挑戰成功時，解鎖下一棒創作
+function completeCloudChallenge() {
+  if (!cloudChallengeMode || cloudChallengePassed) {
+    return;
+  }
+
+  cloudChallengePassed = true;
+  cloudChallengeMode = false;
+
+  refreshRelayControls();
+
+  status(
+    "🏆 接力挑戰成功！現在換你創造下一座迷宮。"
+  );
+
+  console.log(
+    "[Mindspace V5] 挑戰完成",
+    challengeSourceMazeId
+  );
+}
+
 // 將 Uint8Array 壓縮為 Base64 字串
 // Firestore 儲存字串，不直接儲存 TypedArray
 function mazeBytesToBase64(bytes) {
@@ -2618,14 +2922,23 @@ function mazeHasValidPath() {
 }
 
 // 發布按鈕狀態
+
 function refreshPublishButton() {
   const button = $("publishMaze");
-
   if (!button) return;
+
+  const mayPublish =
+    firstCreatorMode ||
+    (
+      cloudChallengePassed &&
+      creatingRelayMaze
+    );
 
   button.disabled =
     mazePublishing ||
     mazePublished ||
+    cloudMazeLoading ||
+    !mayPublish ||
     !firebaseConnected ||
     !firebaseUser ||
     !mazeReady ||
@@ -2636,16 +2949,28 @@ function refreshPublishButton() {
     button.textContent = "☁️ 發布中…";
   } else if (mazePublished) {
     button.textContent = "✓ 已發布";
+  } else if (
+    cloudChallengeMode &&
+    !cloudChallengePassed
+  ) {
+    button.textContent = "🔒 過關後才能發布";
   } else {
     button.textContent = "☁️ 發布迷宮";
   }
 }
 
+
 // 將目前的迷宮正式寫入 Firestore
 async function publishCurrentMaze() {
 
   if (mazePublishing || mazePublished) return;
-
+if (
+  !firstCreatorMode &&
+  !(cloudChallengePassed && creatingRelayMaze)
+) {
+  status("請先完成上一座迷宮，才能發布自己的作品。");
+  return;
+}
   if (!firebaseConnected || !firebaseUser) {
     status("雲端尚未連線，請稍後再試。");
     return;
@@ -2713,13 +3038,20 @@ async function publishCurrentMaze() {
 
         const current = relaySnapshot.data();
 
-        // 本階段只允許發布第一座迷宮
-        // 後續再加入過關後接力資格
-        if (current.activeMazeId) {
-          throw new Error(
-            "雲端已有接力迷宮，請先完成上一位孩子的挑戰。"
-          );
-        }
+       // 接力發布前，確認雲端仍是自己挑戰的迷宮
+const expectedPreviousMazeId =
+  firstCreatorMode
+    ? ""
+    : challengeSourceMazeId;
+
+if (
+  (current.activeMazeId || "") !==
+  expectedPreviousMazeId
+) {
+  throw new Error(
+    "接力迷宮已經更新！請重新挑戰最新的迷宮。"
+  );
+}
 
         const nextVersion =
           Number(current.version || 0) + 1;
@@ -2744,10 +3076,19 @@ async function publishCurrentMaze() {
     );
 
     mazePublished = true;
+currentCloudMazeId = mazeId;
+lastLoadedCloudMazeId = mazeId;
 
-    status(
-      "🎉 發布成功！你的迷宮已儲存到 Firebase 雲端。"
-    );
+cloudChallengeMode = false;
+cloudChallengePassed = false;
+creatingRelayMaze = false;
+firstCreatorMode = false;
+
+refreshRelayControls();
+
+status(
+  "🎉 接力發布成功！你的迷宮已交給下一位孩子挑戰。"
+);
 
     console.log(
       "[Mindspace V5] 迷宮發布成功",
@@ -3336,6 +3677,11 @@ function makeConfetti(){
 function showWin(){
   if(winOpen)return;
 
+  // 如果正在挑戰上一位孩子的迷宮，
+  // 到達終點後解鎖創作資格
+  if (cloudChallengeMode) {
+    completeCloudChallenge();
+  }
   winOpen=true;
   resetJoystick();
   keys.clear();
@@ -3364,17 +3710,35 @@ $("keepExploring").onclick=()=>{
   status("繼續探索！你也可以重新設計迷宮。");
 };
 
-$("createAgain").onclick=()=>{
+
+$("createAgain").onclick = () => {
   closeWin();
 
-  // 孩子可以重新排列實體積木，
-  // 再透過相機建立新的挑戰。
+  if (
+    !firstCreatorMode &&
+    !cloudChallengePassed
+  ) {
+    status("請先完成上一位孩子的迷宮。");
+    return;
+  }
+
+  creatingRelayMaze = true;
+  cloudChallengeMode = false;
+
+  // 開始製作下一座迷宮
+  mazePublished = false;
+
   openScan();
 
   scanMessage(
-    "換你出題！重新排列 Plus-Plus 積木，拍照建立新的迷宮。"
+    "換你出題！請重新排列 Plus-Plus 積木，" +
+    "拍照建立下一座接力迷宮。"
   );
+
+  refreshRelayControls();
+  refreshPublishButton();
 };
+
 
 // =======================================
 // 動畫與渲染

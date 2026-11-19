@@ -57,99 +57,101 @@
     mystery: { x: 0.70, y: 0.79 },
     snapDuration: 350,
     enterDelay: 780,
-    mazeUnlockCost: 60,
+    foodUnlockCost: 60,
     initialStars: 24,
     adminHoldMs: 3000
   };
 
-  const STORAGE = {
-    stars: "mindspace-v4-stars",
-    maze: "mindspace-v4-maze-unlocked"
-  };
+ const STORAGE = {
+  stars: "mindspace-v4-stars",
+  food: "mindspace-v5-food-unlocked"
+};
 
-  const LEVELS = [
-    {
-      id: "ocean",
-      name: "海底世界",
-      image: ASSETS.ocean,
-      unlocked: true,
-      x: 14,
-      y: 39
-    },
-    {
-      id: "zoo",
-      name: "動物園",
-      image: ASSETS.zoo,
-      unlocked: true,
-      x: 32,
-      y: 39
-    },
-    {
-      id: "food",
-      name: "食物王國",
-      image: ASSETS.food,
-      unlocked: true,
-      x: 50,
-      y: 39
-    },
-    {
-      id: "traffic",
-      name: "交通工具",
-      image: ASSETS.traffic,
-      unlocked: true,
-      x: 68,
-      y: 39
-    },
-    {
-      id: "maze",
-      name: "小小迷宮設計師",
-      image: ASSETS.maze,
-      unlocked: false,
-      unlockCost: 60,
-      x: 86,
-      y: 39
-    },
-    {
-      id: "mystery-6",
-      name: "神秘關卡 6",
-      image: ASSETS.locked,
-      unlocked: false,
-      x: 14,
-      y: 70
-    },
-    {
-      id: "mystery-7",
-      name: "神秘關卡 7",
-      image: ASSETS.locked,
-      unlocked: false,
-      x: 32,
-      y: 70
-    },
-    {
-      id: "mystery-8",
-      name: "神秘關卡 8",
-      image: ASSETS.locked,
-      unlocked: false,
-      x: 50,
-      y: 70
-    },
-    {
-      id: "mystery-9",
-      name: "神秘關卡 9",
-      image: ASSETS.locked,
-      unlocked: false,
-      x: 68,
-      y: 70
-    },
-    {
-      id: "mystery-10",
-      name: "神秘關卡 10",
-      image: ASSETS.locked,
-      unlocked: false,
-      x: 86,
-      y: 70
-    }
-  ];
+ 
+const LEVELS = [
+  {
+    id: "maze",
+    name: "小小迷宮設計師",
+    image: ASSETS.maze,
+    unlocked: true,
+    x: 14,
+    y: 39
+  },
+  {
+    id: "ocean",
+    name: "海底世界",
+    image: ASSETS.ocean,
+    unlocked: true,
+    x: 32,
+    y: 39
+  },
+  {
+    id: "zoo",
+    name: "動物園",
+    image: ASSETS.zoo,
+    unlocked: true,
+    x: 50,
+    y: 39
+  },
+  {
+    id: "traffic",
+    name: "交通工具",
+    image: ASSETS.traffic,
+    unlocked: true,
+    x: 68,
+    y: 39
+  },
+  {
+    id: "food",
+    name: "食物王國",
+    image: ASSETS.food,
+    unlocked: false,
+    unlockCost: 60,
+    x: 86,
+    y: 39
+  },
+  {
+    id: "mystery-6",
+    name: "神秘關卡 6",
+    image: ASSETS.locked,
+    unlocked: false,
+    x: 14,
+    y: 70
+  },
+  {
+    id: "mystery-7",
+    name: "神秘關卡 7",
+    image: ASSETS.locked,
+    unlocked: false,
+    x: 32,
+    y: 70
+  },
+  {
+    id: "mystery-8",
+    name: "神秘關卡 8",
+    image: ASSETS.locked,
+    unlocked: false,
+    x: 50,
+    y: 70
+  },
+  {
+    id: "mystery-9",
+    name: "神秘關卡 9",
+    image: ASSETS.locked,
+    unlocked: false,
+    x: 68,
+    y: 70
+  },
+  {
+    id: "mystery-10",
+    name: "神秘關卡 10",
+    image: ASSETS.locked,
+    unlocked: false,
+    x: 86,
+    y: 70
+  }
+];
+
 
   function readStorage(key) {
     try {
@@ -198,10 +200,10 @@
   let adminModal;
 
   let stars = readInitialStars();
-  let mazeUnlocked =
-    readStorage(STORAGE.maze) === "true";
+  let foodUnlocked =
+    readStorage(STORAGE.food) === "true";
 
-  let unlockingMaze = false;
+  let unlockingFood = false;
   let noticeTimer = null;
   let adminHoldTimer = null;
   let adminPointerId = null;
@@ -1000,7 +1002,7 @@
 
       button.appendChild(img);
 
-      if (level.id === "maze") {
+      if (level.id === "food") {
         const seal = document.createElement("div");
         seal.className = "ms-maze-seal";
 
@@ -1010,7 +1012,7 @@
 
         const cost = document.createElement("div");
         cost.className = "ms-maze-cost";
-        cost.textContent = "⭐ " + CONFIG.mazeUnlockCost;
+        cost.textContent = "⭐ " + CONFIG.foodUnlockCost;
 
         seal.appendChild(lock);
         seal.appendChild(cost);
@@ -1053,8 +1055,8 @@
 
     if (unlockConfirmButton) {
       unlockConfirmButton.disabled =
-        stars < CONFIG.mazeUnlockCost ||
-        unlockingMaze;
+        stars < CONFIG.foodUnlockCost ||
+        unlockingFood;
     }
   }
 
@@ -1069,7 +1071,7 @@
   function setStars(value) {
     const number = Number(value);
 
-    if (!Number.isFinite(number) || unlockingMaze) {
+    if (!Number.isFinite(number) || unlockingFood) {
       return stars;
     }
 
@@ -1097,44 +1099,46 @@
   // 05. 關卡狀態
   // =====================================
 
-  function isLevelUnlocked(level) {
-    if (level.id === "maze") {
-      return mazeUnlocked;
-    }
-    return level.unlocked === true;
+function isLevelUnlocked(level) {
+  if (level.id === "food") {
+    return foodUnlocked;
   }
 
-  function updateAllLevelStates() {
-    LEVELS.forEach(level => {
-      const button = levelButtons.get(level.id);
-      if (!button) return;
+  return level.unlocked === true;
+}
 
-      const unlocked = isLevelUnlocked(level);
+ 
+function updateAllLevelStates() {
+  LEVELS.forEach(level => {
+    const button = levelButtons.get(level.id);
+    if (!button) return;
 
-      button.classList.toggle("unlocked", unlocked);
-      button.classList.toggle("locked", !unlocked);
+    const unlocked = isLevelUnlocked(level);
 
-      button.setAttribute(
-        "aria-label",
-        level.name +
-          (unlocked
-            ? "，進入關卡"
-            : level.id === "maze"
-              ? "，需要 60 顆星星解鎖"
-              : "，尚未解鎖")
-      );
+    button.classList.toggle("unlocked", unlocked);
+    button.classList.toggle("locked", !unlocked);
 
-      if (level.id === "maze") {
-        const seal =
-          button.querySelector(".ms-maze-seal");
+    button.setAttribute(
+      "aria-label",
+      level.name +
+        (unlocked
+          ? "，進入關卡"
+          : level.id === "food"
+            ? "，需要 60 顆星星解鎖"
+            : "，尚未解鎖")
+    );
 
-        if (seal) {
-          seal.style.display =
-            unlocked ? "none" : "flex";
-        }
+    if (level.id === "food") {
+      const seal =
+        button.querySelector(".ms-maze-seal");
+
+      if (seal) {
+        seal.style.display =
+          unlocked ? "none" : "flex";
       }
-    });
-  }
+    }
+  });
+}
 
   function showNotice(message) {
     if (!notice) return;
@@ -1160,7 +1164,7 @@
     unlockModal.setAttribute("aria-modal", "true");
     unlockModal.setAttribute(
       "aria-label",
-      "解鎖小小迷宮設計師"
+      "解鎖食物王國"
     );
 
     const card = document.createElement("div");
@@ -1172,7 +1176,7 @@
 
     const title = document.createElement("div");
     title.className = "ms-unlock-title";
-    title.textContent = "小小迷宮設計師";
+    title.textContent = "食物王國";
 
     const description = document.createElement("div");
     description.className = "ms-unlock-description";
@@ -1181,7 +1185,7 @@
 
     const price = document.createElement("div");
     price.className = "ms-unlock-price";
-    price.textContent = "⭐ " + CONFIG.mazeUnlockCost;
+    price.textContent = "⭐ " + CONFIG.foodUnlockCost;
 
     unlockBalance = document.createElement("div");
     unlockBalance.className = "ms-unlock-balance";
@@ -1204,7 +1208,7 @@
 
     unlockConfirmButton.addEventListener(
       "click",
-      confirmMazeUnlock
+      confirmFoodUnlock
     );
 
     actions.appendChild(cancel);
@@ -1229,7 +1233,7 @@
   }
 
   function openUnlockModal() {
-    if (mazeUnlocked || unlockingMaze) return;
+    if (foodUnlocked|| unlockingFood) return;
 
     updateStarDisplay();
     unlockModal.classList.add("visible");
@@ -1237,7 +1241,7 @@
   }
 
   function closeUnlockModal() {
-    if (unlockingMaze) return;
+    if (unlockingFood) return;
     unlockModal.classList.remove("visible");
   }
 
@@ -1245,10 +1249,10 @@
   // 07. 扣除星星並解鎖
   // =====================================
 
-  function confirmMazeUnlock() {
-    if (mazeUnlocked || unlockingMaze) return;
+  function confirmFoodUnlock() {
+    if (foodUnlocked || unlockingFood) return;
 
-    const cost = CONFIG.mazeUnlockCost;
+    const cost = CONFIG.foodUnlockCost;
 
     if (stars < cost) {
       closeUnlockModal();
@@ -1258,28 +1262,28 @@
       return;
     }
 
-    unlockingMaze = true;
+    unlockingFood = true;
     unlockConfirmButton.disabled = true;
 
     const nextStars = stars - cost;
 
-    if (!writeStorage(STORAGE.maze, "true")) {
-      unlockingMaze = false;
+    if (!writeStorage(STORAGE.food, "true")) {
+      unlockingFood = false;
       updateStarDisplay();
       showNotice("無法儲存解鎖狀態");
       return;
     }
 
     if (!writeStorage(STORAGE.stars, nextStars)) {
-      writeStorage(STORAGE.maze, "false");
-      unlockingMaze = false;
+      writeStorage(STORAGE.food, "false");
+      unlockingFood = false;
       updateStarDisplay();
       showNotice("無法儲存星星點數");
       return;
     }
 
     stars = nextStars;
-    mazeUnlocked = true;
+    foodUnlocked = true;
 
     updateStarDisplay();
     emitStarsChange();
@@ -1287,28 +1291,28 @@
     unlockModal.classList.remove("visible");
 
     window.dispatchEvent(
-      new CustomEvent("mindspace:level-unlocked", {
-        detail: {
-          id: "maze",
-          name: "小小迷宮設計師",
-          cost,
-          stars
-        }
-      })
-    );
+  new CustomEvent("mindspace:level-unlocked", {
+    detail: {
+      id: "food",
+      name: "食物王國",
+      cost,
+      stars
+    }
+  })
+);
 
-    playMazeUnlockAnimation();
+    playFoodUnlockAnimation();
   }
 
   // =====================================
   // 08. 碎裂特效
   // =====================================
 
-  function playMazeUnlockAnimation() {
-    const button = levelButtons.get("maze");
+  function playFoodUnlockAnimation() {
+  const button = levelButtons.get("food");
 
     if (!button) {
-      unlockingMaze = false;
+      unlockingFood = false;
       updateAllLevelStates();
       return;
     }
@@ -1323,9 +1327,9 @@
       ).matches;
 
     if (reduceMotion) {
-      unlockingMaze = false;
+      unlockingFood = false;
       updateAllLevelStates();
-      showNotice("🎉 小小迷宮設計師解鎖成功！");
+      showNotice("🎉 食物王國解鎖成功！");
       return;
     }
 
@@ -1344,14 +1348,14 @@
       button.classList.add("maze-revealed");
 
       showNotice(
-        "🎉 解鎖成功！小小迷宮設計師開放了！"
+        "🎉 解鎖成功！食物王國開放了！"
       );
     }, 1000);
 
     setTimeout(() => {
       button.classList.remove("maze-revealed");
       if (seal) seal.classList.remove("breaking");
-      unlockingMaze = false;
+      unlockingFood = false;
       updateStarDisplay();
     }, 1600);
   }
@@ -1452,7 +1456,7 @@
 
   function setupAdminLongPress(element) {
     element.addEventListener("pointerdown", event => {
-      if (unlockingMaze || adminPointerId !== null) {
+      if (unlockingFood || adminPointerId !== null) {
         return;
       }
 
@@ -1550,7 +1554,7 @@
     makeButton(
       "🔒 重新上鎖（保留星星）",
       "ms-admin-reset-lock",
-      resetMazeLock
+      resetFoodLock
     );
 
     makeButton(
@@ -1587,7 +1591,7 @@
   }
 
   function openAdminModal() {
-    if (unlockingMaze || currentMode !== "mystery") {
+    if (unlockingFood || currentMode !== "mystery") {
       return;
     }
 
@@ -1612,29 +1616,29 @@
   // 11. v5：重新上鎖
   // =====================================
 
-  function resetMazeLock() {
-    if (unlockingMaze) return;
+ function resetFoodLock() {
+    if (unlockingFood) return;
 
     const success =
-      writeStorage(STORAGE.maze, "false");
+      writeStorage(STORAGE.food, "false");
 
     if (!success) {
       showNotice("無法儲存重置狀態");
       return;
     }
 
-    mazeUnlocked = false;
+    foodUnlocked = false;
     updateAllLevelStates();
     closeAdminModal();
 
     showNotice(
-      "🔒 小小迷宮設計師已重新上鎖！"
+      "🔒 食物王國已重新上鎖！"
     );
 
     window.dispatchEvent(
       new CustomEvent("mindspace:level-reset", {
         detail: {
-          id: "maze",
+          id: "food",
           unlocked: false
         }
       })
@@ -1646,7 +1650,7 @@
   // =====================================
 
   function resetStarsOnly() {
-    if (unlockingMaze) return;
+    if (unlockingFood) return;
 
     if (!writeStorage(
       STORAGE.stars,
@@ -1670,10 +1674,10 @@
   // =====================================
 
   function resetAllTestData() {
-    if (unlockingMaze) return;
+    if (unlockingFood) return;
 
     const oldStars = stars;
-    const oldMazeUnlocked = mazeUnlocked;
+    const oldfoodUnlocked = foodUnlocked;
 
     // 先寫入星星
     if (!writeStorage(
@@ -1685,12 +1689,12 @@
     }
 
     // 再寫入鎖定狀態
-    if (!writeStorage(STORAGE.maze, "false")) {
+    if (!writeStorage(STORAGE.food, "false")) {
       // 嘗試還原星星
       writeStorage(STORAGE.stars, oldStars);
 
       stars = oldStars;
-      mazeUnlocked = oldMazeUnlocked;
+      foodUnlocked = oldfoodUnlocked;
 
       updateStarDisplay();
       updateAllLevelStates();
@@ -1700,7 +1704,7 @@
     }
 
     stars = CONFIG.initialStars;
-    mazeUnlocked = false;
+    foodUnlocked = false;
 
     updateStarDisplay();
     updateAllLevelStates();
@@ -1709,14 +1713,14 @@
     closeAdminModal();
 
     showNotice(
-      "🔄 已恢復 24 顆星星，迷宮重新上鎖！"
+      "🔄 已恢復 24 顆星星，食物王國重新上鎖！"
     );
 
     window.dispatchEvent(
       new CustomEvent("mindspace:level-reset", {
         detail: {
-          id: "maze",
-          unlocked: false
+        id: "food",
+        unlocked: false
         }
       })
     );
@@ -1726,40 +1730,51 @@
   // 14. 選擇關卡
   // =====================================
 
-  function selectLevel(level) {
-    if (unlockingMaze) return;
+ 
+function selectLevel(level) {
+  if (unlockingFood) return;
 
-    if (level.id === "maze" && !mazeUnlocked) {
-      openUnlockModal();
-      return;
-    }
-
-    if (!isLevelUnlocked(level)) {
-      showNotice(
-        "🔒 " + level.name + " 尚未解鎖！"
-      );
-      return;
-    }
-
-    selectedTheme = level.id;
-
-    window.dispatchEvent(
-      new CustomEvent("mindspace:theme-selected", {
-        detail: {
-          id: level.id,
-          name: level.name,
-          theme: level.id
-        }
-      })
-    );
-
-    console.info(
-      "[Mindspace] 選擇關卡：",
-      level.name
-    );
-
-    enterMode("free", level.id);
+  // 食物王國：需要星星解鎖
+  if (level.id === "food" && !foodUnlocked) {
+    openUnlockModal();
+    return;
   }
+
+  // 其他尚未開放的關卡
+  if (!isLevelUnlocked(level)) {
+    showNotice(
+      "🔒 " + level.name + " 尚未解鎖！"
+    );
+    return;
+  }
+
+  selectedTheme = level.id;
+
+  window.dispatchEvent(
+    new CustomEvent("mindspace:theme-selected", {
+      detail: {
+        id: level.id,
+        name: level.name,
+        theme: level.id
+      }
+    })
+  );
+
+  console.info(
+    "[Mindspace] 選擇關卡：",
+    level.name
+  );
+
+  // 小小迷宮設計師：進入獨立 V5 遊戲
+  if (level.id === "maze") {
+    window.location.href = "./maze-test.html";
+    return;
+  }
+
+  // 其他關卡：維持原本的 Plus-Plus 創作世界
+  enterMode("free", level.id);
+}
+
 
   // =====================================
   // 15. 首頁拖曳座標
@@ -1965,7 +1980,7 @@
   }
 
   function showHome() {
-    if (unlockingMaze) return;
+    if (unlockingFood) return;
 
     if (dragging) restoreChoice();
 
@@ -2038,16 +2053,21 @@
       }
     });
 
-    console.info(
-      "[Mindspace Home] v5 已載入",
-      {
-        stars,
-        mazeUnlocked,
-        mazeCost: CONFIG.mazeUnlockCost,
-        adminHoldMs: CONFIG.adminHoldMs
-      }
-    );
+   console.info(
+  "[Mindspace Home] v5 已載入",
+  {
+    stars,
+    foodUnlocked,
+    foodCost: CONFIG.foodUnlockCost,
+    adminHoldMs: CONFIG.adminHoldMs
   }
+);
+
+} // 結束 initialize()
+
+// =====================================
+// 18. 對外 API
+// =====================================
 
   // =====================================
   // 18. 對外 API
@@ -2070,7 +2090,7 @@
     setStars,
     addStars,
 
-    isMazeUnlocked: () => mazeUnlocked
+   isFoodUnlocked: () => foodUnlocked
   };
 
   if (document.readyState === "loading") {

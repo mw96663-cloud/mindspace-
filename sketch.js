@@ -28,7 +28,8 @@ window.mindspaceSelectedId = null;
 let dragging = null;
 let dragDX = 0;
 let dragDY = 0;
-
+let mindspaceDragStartX = 0;
+let mindspaceDragStartY = 0;
 const MOVEMENTS = [
   "float", "swim", "walk", "fly",
   "bounce", "run", "crawl", "hover"
@@ -1631,12 +1632,31 @@ function mousePressed() {
 
       dragDX = mouseX - item.x;
       dragDY = mouseY - item.y;
-
+      mindspaceDragStartX = mouseX;
+      mindspaceDragStartY = mouseY;
       return false;
     }
   }
 }
 
+/* ==========================================
+   Mindspace｜拖曳到螢幕邊界移除積木
+   只移除世界物件，不刪除 Firebase
+========================================== */
+
+const MINDSPACE_EDGE_DELETE_SIZE = 30;
+
+// 判斷滑鼠是否位於畫布邊界
+function isMindspaceDeleteEdge(x, y) {
+  return (
+    x <= MINDSPACE_EDGE_DELETE_SIZE ||
+    x >= width - MINDSPACE_EDGE_DELETE_SIZE ||
+    y <= MINDSPACE_EDGE_DELETE_SIZE ||
+    y >= height - MINDSPACE_EDGE_DELETE_SIZE
+  );
+}
+
+// 拖曳積木
 function mouseDragged() {
   if (!dragging) return;
 
@@ -1647,14 +1667,45 @@ function mouseDragged() {
   return false;
 }
 
+// 放開積木
 function mouseReleased() {
-  if (dragging) {
-    dragging.baseY = dragging.y;
+  if (!dragging) return;
+
+  const item = dragging;
+  const itemId = item.id;
+
+  // 只有真正移動過積木，才允許邊界移除
+const movedDistance = Math.hypot(
+  mouseX - mindspaceDragStartX,
+  mouseY - mindspaceDragStartY
+);
+
+  const atEdge = isMindspaceDeleteEdge(
+    mouseX,
+    mouseY
+  );
+
+  if (atEdge && movedDistance > 10) {
+    window.removeMindspaceCreation(itemId);
+
+    const bubble = document.getElementById(
+      "speechBubble"
+    );
+
+    if (bubble) {
+      bubble.textContent =
+        "積木已從世界移除，雲端素材仍然保留！";
+    }
+
+    return false;
   }
 
+  item.baseY = item.y;
   dragging = null;
-}
 
+  return false;
+}
+ 
 /* =====================================
    15｜清空世界
 ===================================== */

@@ -897,7 +897,7 @@ function drawAmbientParticles() {
    07｜原始積木進入世界
 ===================================== */
 
-window.addMindspaceCreation = function(dataURL) {
+window.addMindspaceCreation = function(dataURL, dropPosition = null) {
   return new Promise((resolve, reject) => {
     loadImage(
       dataURL,
@@ -930,21 +930,31 @@ window.addMindspaceCreation = function(dataURL) {
           id: crypto.randomUUID(),
           img,
 
-          x: random(
-            w / 2 + 20,
-            max(
-              w / 2 + 21,
-              width - w / 2 - 20
-            )
-          ),
+        
+          x: dropPosition &&
+             Number.isFinite(dropPosition.x)
+            ? constrain(
+                dropPosition.x,
+                w / 2,
+                max(w / 2, width - w / 2)
+              )
+            : random(
+                w / 2 + 20,
+                max(w / 2 + 21, width - w / 2 - 20)
+              ),
 
-          y: random(
-            h / 2 + 40,
-            max(
-              h / 2 + 41,
-              height - h / 2 - 40
-            )
-          ),
+          y: dropPosition &&
+             Number.isFinite(dropPosition.y)
+            ? constrain(
+                dropPosition.y,
+                h / 2,
+                max(h / 2, height - h / 2)
+              )
+            : random(
+                h / 2 + 40,
+                max(h / 2 + 41, height - h / 2 - 40)
+              ),
+
 
           baseY: 0,
           w,

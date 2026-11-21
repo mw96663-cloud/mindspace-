@@ -1659,6 +1659,53 @@ function mouseReleased() {
    15｜清空世界
 ===================================== */
 
+/* =====================================
+   移除世界中的單一積木
+   不影響 Firebase 雲端素材庫
+===================================== */
+
+window.removeMindspaceCreation = function(id) {
+  const index = creations.findIndex(
+    item => item.id === id
+  );
+
+  if (index === -1) return false;
+
+  // 只移除目前世界中的作品
+  creations.splice(index, 1);
+
+  // 移除該作品所屬的環境資料
+  for (let i = environments.length - 1; i >= 0; i--) {
+    if (environments[i].id === id) {
+      environments.splice(i, 1);
+    }
+  }
+
+  for (let i = worldZones.length - 1; i >= 0; i--) {
+    if (worldZones[i].id === id) {
+      worldZones.splice(i, 1);
+    }
+  }
+
+  if (dragging?.id === id) {
+    dragging = null;
+  }
+
+  // 取消選取
+  selectedCreationId = null;
+  window.mindspaceSelectedId = null;
+
+  window.updateMindspaceCount?.(creations.length);
+
+  window.dispatchEvent(
+    new CustomEvent("mindspace:selection", {
+      detail: { id: null }
+    })
+  );
+
+  return true;
+};
+
 window.clearMindspaceWorld = function() {
   selectedCreationId = null;
   window.mindspaceSelectedId = null;

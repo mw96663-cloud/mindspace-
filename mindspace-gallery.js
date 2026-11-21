@@ -469,28 +469,24 @@ async function createAssetCard(asset) {
 
   card.appendChild(image);
 
-  let imageURL = null;
-  let available = false;
+ 
+let available = false;
 
-  try {
-    const blob = await LIB().loadAssetBlob(asset);
-    imageURL = URL.createObjectURL(blob);
-    image.src = imageURL;
-    available = true;
+try {
+  const blob = await LIB().loadAssetBlob(asset);
 
-    image.addEventListener("load", () => {
-      if (imageURL) {
-        URL.revokeObjectURL(imageURL);
-        imageURL = null;
-      }
-    }, { once: true });
+  const reader = new FileReader();
 
-    image.addEventListener("error", () => {
-      if (imageURL) {
-        URL.revokeObjectURL(imageURL);
-        imageURL = null;
-      }
-    }, { once: true });
+  image.src = await new Promise((resolve, reject) => {
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () =>
+      reject(new Error("無法建立素材縮圖"));
+
+    reader.readAsDataURL(blob);
+  });
+
+  available = true;
+
 
   } catch (error) {
     console.warn("素材圖片載入失敗", asset.id, error);

@@ -49,138 +49,138 @@
   }
 
  
+
 function createGalleryUI() {
-  if (document.getElementById("mindspaceLibraryOverlay")) {
+  if (document.getElementById("mindspaceLibraryPanel")) {
     return;
   }
 
-  // 01｜獨立素材庫按鈕
+  // 素材庫按鈕放進原本浮動工具列
   const openButton = document.createElement("button");
   openButton.id = "mindspaceOpenLibrary";
   openButton.type = "button";
-  openButton.textContent = "☁️ 素材庫";
+  openButton.className = "floatButton";
+  openButton.textContent = "☁️";
+  openButton.title = "開啟素材庫";
   openButton.setAttribute("aria-label", "開啟雲端素材庫");
 
-  Object.assign(openButton.style, {
-    position: "fixed",
-    left: "20px",
-    bottom: "20px",
-    zIndex: "39",
-    border: "none",
-    borderRadius: "18px",
-    padding: "14px 20px",
-    background: "#ffffff",
-    color: "#26364b",
-    fontSize: "16px",
-    fontWeight: "bold",
-    boxShadow: "0 5px 20px #0002",
-    cursor: "pointer"
-  });
+  const controls = document.getElementById("floatingControls");
+  const workbenchButton = document.getElementById("bubbleWorkbench");
 
-  document.body.appendChild(openButton);
+  if (controls) {
+    if (workbenchButton) {
+      controls.insertBefore(openButton, workbenchButton);
+    } else {
+      controls.appendChild(openButton);
+    }
+  } else {
+    Object.assign(openButton.style, {
+      position: "fixed",
+      right: "20px",
+      bottom: "90px",
+      zIndex: "45"
+    });
+    document.body.appendChild(openButton);
+  }
 
-  // 02｜素材庫獨立視窗
-  const overlay = document.createElement("div");
-  overlay.id = "mindspaceLibraryOverlay";
-
-  Object.assign(overlay.style, {
-    position: "fixed",
-    inset: "0",
-    zIndex: "120",
-    display: "none",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "16px",
-    background: "rgba(9,24,44,0.65)"
-  });
-
-  const panel = document.createElement("div");
+  // 右側面板，不使用全畫面遮罩
+  // 這樣積木可以直接拖出素材庫到世界
+  const panel = document.createElement("aside");
+  panel.id = "mindspaceLibraryPanel";
 
   Object.assign(panel.style, {
-    width: "min(960px, 100%)",
-    maxHeight: "90dvh",
-    minHeight: "min(500px, 80dvh)",
+    position: "fixed",
+    top: "0",
+    right: "0",
+    width: "min(400px, 85vw)",
+    height: "100dvh",
+    zIndex: "110",
+    background: "#eee7d9",
     display: "flex",
     flexDirection: "column",
-    background: "#ffffff",
-    borderRadius: "24px",
-    overflow: "hidden",
-    boxShadow: "0 15px 50px #0003"
+    boxShadow: "-8px 0 30px #0003",
+    transform: "translateX(105%)",
+    transition: "transform 0.28s ease",
+    visibility: "hidden",
+    pointerEvents: "none",
+    overflow: "hidden"
   });
 
-  // 03｜標題列
   const header = document.createElement("div");
 
   Object.assign(header.style, {
     display: "flex",
-    alignItems: "center",
     justifyContent: "space-between",
-    padding: "18px 22px",
-    borderBottom: "1px solid #e7edf4",
+    alignItems: "center",
+    padding: "16px",
+    background: "#d4c5a8",
+    borderBottom: "3px solid #a39477",
     flexShrink: "0"
   });
 
-  const heading = document.createElement("h2");
-  heading.textContent = "☁️ Mindspace 雲端素材庫";
+  const heading = createElement(
+    "h2",
+    "☁️ Mindspace 積木背包"
+  );
 
   Object.assign(heading.style, {
     margin: "0",
-    fontSize: "20px",
-    color: "#26364b"
+    fontSize: "18px",
+    color: "#453b2e"
   });
 
-  const closeButton = document.createElement("button");
+  const closeButton = createElement("button", "❯");
   closeButton.type = "button";
-  closeButton.textContent = "✕";
-  closeButton.setAttribute("aria-label", "關閉素材庫");
+  closeButton.setAttribute("aria-label", "向右收合素材庫");
 
   Object.assign(closeButton.style, {
     width: "40px",
     height: "40px",
-    border: "none",
-    borderRadius: "50%",
-    background: "#f1f5f9",
-    color: "#26364b",
-    fontSize: "20px",
-    cursor: "pointer"
+    borderRadius: "8px",
+    background: "#f5eee1",
+    color: "#453b2e",
+    fontSize: "20px"
   });
 
   header.append(heading, closeButton);
 
-  // 04｜素材庫內容
   const content = document.createElement("div");
 
   Object.assign(content.style, {
     flex: "1",
     minHeight: "0",
     overflowY: "auto",
-    overflowX: "hidden",
-    padding: "22px"
+    padding: "14px",
+    overscrollBehavior: "contain"
   });
 
-  const description = document.createElement("p");
-  description.textContent =
-    "每個孩子創造的積木角色與環境，都可以保存在這裡，並重新加入想像世界。";
+  const description = createElement(
+    "p",
+    "按住積木，拖曳到左側世界即可加入。"
+  );
 
   Object.assign(description.style, {
-    margin: "0 0 16px",
-    color: "#65788d",
-    lineHeight: "1.7"
+    fontSize: "13px",
+    color: "#675c4b",
+    margin: "0 0 12px"
   });
 
-  refreshButton = document.createElement("button");
-  refreshButton.type = "button";
-  refreshButton.textContent = "🔄 重新整理素材庫";
-  refreshButton.className = "action";
+  refreshButton = createElement(
+    "button",
+    "🔄 重新整理素材庫",
+    "action"
+  );
 
-  galleryStatus = document.createElement("p");
-  galleryStatus.textContent = "正在準備雲端素材庫……";
+  galleryStatus = createElement(
+    "p",
+    "正在準備雲端素材庫……"
+  );
   galleryStatus.setAttribute("aria-live", "polite");
 
   Object.assign(galleryStatus.style, {
-    fontSize: "13px",
-    color: "#65788d",
-    margin: "12px 0"
+    fontSize: "12px",
+    color: "#675c4b",
+    margin: "10px 0"
   });
 
   galleryGrid = document.createElement("div");
@@ -188,10 +188,13 @@ function createGalleryUI() {
 
   Object.assign(galleryGrid.style, {
     display: "grid",
-    gridTemplateColumns:
-      "repeat(auto-fill, minmax(150px, 1fr))",
-    gap: "14px",
-    marginTop: "16px"
+    gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+    gap: "6px",
+    padding: "9px",
+    background: "#b6aa94",
+    border: "3px solid #91836b",
+    borderRadius: "8px",
+    alignContent: "start"
   });
 
   content.append(
@@ -202,49 +205,52 @@ function createGalleryUI() {
   );
 
   panel.append(header, content);
-  overlay.appendChild(panel);
-  document.body.appendChild(overlay);
+  document.body.appendChild(panel);
 
-  // 05｜開啟素材庫
   function openGallery() {
-    overlay.style.display = "flex";
+    panel.style.visibility = "visible";
+    panel.style.pointerEvents = "auto";
+    panel.style.transform = "translateX(0)";
+    openButton.setAttribute("aria-expanded", "true");
     void refreshGallery();
   }
 
-  // 06｜關閉素材庫
   function closeGallery() {
-    overlay.style.display = "none";
+    panel.style.transform = "translateX(105%)";
+    panel.style.pointerEvents = "none";
+    openButton.setAttribute("aria-expanded", "false");
+
+    setTimeout(() => {
+      if (panel.style.transform === "translateX(105%)") {
+        panel.style.visibility = "hidden";
+      }
+    }, 280);
   }
 
-  openButton.addEventListener("click", openGallery);
+  openButton.addEventListener("click", () => {
+    if (panel.style.transform === "translateX(0)") {
+      closeGallery();
+    } else {
+      openGallery();
+    }
+  });
+
   closeButton.addEventListener("click", closeGallery);
 
-  overlay.addEventListener("click", event => {
-    if (event.target === overlay) {
-      closeGallery();
-    }
-  });
-
   document.addEventListener("keydown", event => {
-    if (
-      event.key === "Escape" &&
-      overlay.style.display === "flex"
-    ) {
+    if (event.key === "Escape") {
       closeGallery();
     }
   });
 
-  refreshButton.addEventListener(
-    "click",
-    refreshGallery
-  );
+  refreshButton.addEventListener("click", refreshGallery);
 
-  // 07｜提供其他程式呼叫
   window.openMindspaceGallery = openGallery;
   window.closeMindspaceGallery = closeGallery;
 
   librarySection = panel;
 }
+
 
   // =====================================
   // 02｜圖片轉換
@@ -421,142 +427,211 @@ function createGalleryUI() {
   // 05｜雲端素材卡片
   // =====================================
 
-  async function createAssetCard(asset) {
-    const card = createElement("div");
+ 
+async function createAssetCard(asset) {
+  const card = document.createElement("div");
+  card.title = asset.name || "積木作品";
+  card.setAttribute(
+    "aria-label",
+    `拖曳${asset.name || "積木作品"}到世界`
+  );
 
-    Object.assign(card.style, {
-      border: "1px solid #dce5ef",
-      borderRadius: "14px",
-      padding: "10px",
-      background: "#f8fbff",
-      minWidth: "0"
-    });
+  Object.assign(card.style, {
+    position: "relative",
+    width: "100%",
+    aspectRatio: "1 / 1",
+    border: "2px solid #938670",
+    borderRadius: "3px",
+    padding: "5px",
+    background: "#d9cfbd",
+    boxShadow:
+      "inset 2px 2px #f8f0e3, inset -2px -2px #a89b86",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "grab",
+    touchAction: "none",
+    userSelect: "none",
+    overflow: "hidden"
+  });
 
-    const image = document.createElement("img");
+  const image = document.createElement("img");
+  image.alt = asset.name || "積木作品";
+  image.draggable = false;
 
-    Object.assign(image.style, {
-      width: "100%",
-      height: "110px",
+  Object.assign(image.style, {
+    width: "100%",
+    height: "100%",
+    objectFit: "contain",
+    pointerEvents: "none",
+    userSelect: "none"
+  });
+
+  card.appendChild(image);
+
+  let imageURL = null;
+  let available = false;
+
+  try {
+    const blob = await LIB().loadAssetBlob(asset);
+    imageURL = URL.createObjectURL(blob);
+    image.src = imageURL;
+    available = true;
+
+    image.addEventListener("load", () => {
+      if (imageURL) {
+        URL.revokeObjectURL(imageURL);
+        imageURL = null;
+      }
+    }, { once: true });
+
+    image.addEventListener("error", () => {
+      if (imageURL) {
+        URL.revokeObjectURL(imageURL);
+        imageURL = null;
+      }
+    }, { once: true });
+
+  } catch (error) {
+    console.warn("素材圖片載入失敗", asset.id, error);
+    card.style.opacity = "0.45";
+    card.title = "素材圖片無法載入";
+  }
+
+  card.addEventListener("pointerdown", event => {
+    if (!available || event.button !== 0) return;
+
+    event.preventDefault();
+
+    const pointerId = event.pointerId;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    let moved = false;
+
+    // 拖曳預覽圖
+    const ghost = document.createElement("img");
+    ghost.src = image.src;
+    ghost.alt = "";
+
+    Object.assign(ghost.style, {
+      position: "fixed",
+      width: "100px",
+      height: "100px",
       objectFit: "contain",
-      borderRadius: "10px",
-      background: "#eaf1f8"
+      left: `${startX}px`,
+      top: `${startY}px`,
+      transform: "translate(-50%, -50%)",
+      pointerEvents: "none",
+      zIndex: "99999",
+      opacity: "0.9",
+      filter: "drop-shadow(0 5px 8px #0005)"
     });
 
-    image.alt = asset.name || "積木作品";
+    document.body.appendChild(ghost);
 
-    const title = createElement(
-      "div",
-      asset.name || "未命名作品"
-    );
+    card.style.background = "#f4e1a5";
 
-    Object.assign(title.style, {
-      fontWeight: "bold",
-      fontSize: "13px",
-      marginTop: "8px",
-      overflowWrap: "anywhere"
-    });
+    function moveGhost(e) {
+      if (e.pointerId !== pointerId) return;
 
-    const typeLabel = createElement(
-      "div",
-      asset.type === "environment"
-        ? "🏰 環境"
-        : "🐉 角色"
-    );
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
 
-    Object.assign(typeLabel.style, {
-      fontSize: "12px",
-      color: "#64748b",
-      margin: "5px 0"
-    });
+      if (Math.hypot(dx, dy) > 5) {
+        moved = true;
+      }
 
-    const addButton = createElement(
-      "button",
-      "＋ 加入世界",
-      "action primary"
-    );
-
-    addButton.style.fontSize = "12px";
-
-    card.append(
-      image,
-      title,
-      typeLabel,
-      addButton
-    );
-
-    let objectURL = null;
-
-    try {
-      const blob = await LIB().loadAssetBlob(asset);
-
-      objectURL = URL.createObjectURL(blob);
-      image.src = objectURL;
-
-      image.addEventListener(
-        "load",
-        () => {
-          if (objectURL) {
-            URL.revokeObjectURL(objectURL);
-            objectURL = null;
-          }
-        },
-        { once: true }
-      );
-
-      image.addEventListener(
-        "error",
-        () => {
-          if (objectURL) {
-            URL.revokeObjectURL(objectURL);
-            objectURL = null;
-          }
-        },
-        { once: true }
-      );
-
-    } catch (error) {
-      console.warn(
-        "素材圖片載入失敗",
-        asset.id,
-        error
-      );
-
-      image.alt = "圖片載入失敗";
-      addButton.disabled = true;
-      addButton.textContent = "圖片無法載入";
+      ghost.style.left = `${e.clientX}px`;
+      ghost.style.top = `${e.clientY}px`;
     }
 
-    addButton.addEventListener("click", async () => {
-      addButton.disabled = true;
-      addButton.textContent = "加入中……";
+    async function finishDrag(e) {
+      if (e.pointerId !== pointerId) return;
+
+      document.removeEventListener("pointermove", moveGhost);
+      document.removeEventListener("pointerup", finishDrag);
+      document.removeEventListener("pointercancel", cancelDrag);
+
+      ghost.remove();
+      card.style.background = "#d9cfbd";
+
+      if (!moved) return;
+
+      const canvas = document.querySelector("#scene canvas");
+      if (!canvas) {
+        setStatus("找不到互動世界畫布", true);
+        return;
+      }
+
+      const rect = canvas.getBoundingClientRect();
+
+      const inside =
+        e.clientX >= rect.left &&
+        e.clientX <= rect.right &&
+        e.clientY >= rect.top &&
+        e.clientY <= rect.bottom;
+
+      const panel = document.getElementById(
+        "mindspaceLibraryPanel"
+      );
+
+      const panelRect = panel?.getBoundingClientRect();
+
+      const overPanel = panelRect &&
+        e.clientX >= panelRect.left &&
+        e.clientX <= panelRect.right &&
+        e.clientY >= panelRect.top &&
+        e.clientY <= panelRect.bottom;
+
+      // 放在素材庫內或畫布外，就取消拖曳
+      if (!inside || overPanel) return;
+
+      const position = {
+        x: (e.clientX - rect.left) *
+           (canvas.width / rect.width),
+        y: (e.clientY - rect.top) *
+           (canvas.height / rect.height)
+      };
 
       try {
-        await addAssetToWorld(asset);
-
-        addButton.textContent = "✓ 已加入";
-
-      } catch (error) {
-        console.error(error);
-
-        addButton.textContent = "重試加入";
+        setStatus("正在將積木放入世界……");
+        await addAssetToWorld(asset, position);
         setStatus(
-          "加入世界失敗：" + error.message,
+          `✅ ${asset.name || "積木作品"}已加入世界`
+        );
+      } catch (error) {
+        console.error("[Mindspace Drag]", error);
+        setStatus(
+          "拖曳加入失敗：" + error.message,
           true
         );
-
-      } finally {
-        addButton.disabled = false;
       }
-    });
+    }
 
-    return card;
-  }
+    function cancelDrag(e) {
+      if (e.pointerId !== pointerId) return;
+
+      document.removeEventListener("pointermove", moveGhost);
+      document.removeEventListener("pointerup", finishDrag);
+      document.removeEventListener("pointercancel", cancelDrag);
+
+      ghost.remove();
+      card.style.background = "#d9cfbd";
+    }
+
+    document.addEventListener("pointermove", moveGhost);
+    document.addEventListener("pointerup", finishDrag);
+    document.addEventListener("pointercancel", cancelDrag);
+  });
+
+  return card;
+}
 
   // =====================================
   // 06｜將素材加入 p5.js 世界
   // =====================================
 
-  async function addAssetToWorld(asset) {
+  async function addAssetToWorld(asset, dropPosition = null) {
     if (
       typeof window.addMindspaceCreation !== "function"
     ) {

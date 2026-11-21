@@ -48,75 +48,203 @@
     return element;
   }
 
-  function createGalleryUI() {
-    if (document.getElementById("mindspaceCloudLibrary")) {
-      return;
-    }
-
-    const sidebarBody =
-      document.querySelector("#sidebar .sidebarBody");
-
-    if (!sidebarBody) {
-      console.error("找不到 Mindspace 工作台");
-      return;
-    }
-
-    librarySection = createElement("section");
-    librarySection.id = "mindspaceCloudLibrary";
-
-    librarySection.style.gridColumn = "1 / -1";
-
-    const heading = createElement(
-      "h2",
-      "☁️ Mindspace 雲端素材庫"
-    );
-
-    const description = createElement(
-      "p",
-      "這裡保存孩子創造的 Plus-Plus 積木作品。選擇作品即可重新加入世界。",
-      "muted"
-    );
-
-    refreshButton = createElement(
-      "button",
-      "🔄 重新整理素材庫",
-      "action primary"
-    );
-
-    galleryStatus = createElement(
-      "p",
-      "正在準備雲端素材庫……",
-      "muted"
-    );
-
-    galleryStatus.setAttribute("aria-live", "polite");
-
-    galleryGrid = createElement("div");
-    galleryGrid.id = "mindspaceGalleryGrid";
-
-    Object.assign(galleryGrid.style, {
-      display: "grid",
-      gridTemplateColumns:
-        "repeat(auto-fill, minmax(130px, 1fr))",
-      gap: "12px",
-      marginTop: "12px"
-    });
-
-    librarySection.append(
-      heading,
-      description,
-      refreshButton,
-      galleryStatus,
-      galleryGrid
-    );
-
-    sidebarBody.appendChild(librarySection);
-
-    refreshButton.addEventListener(
-      "click",
-      refreshGallery
-    );
+ 
+function createGalleryUI() {
+  if (document.getElementById("mindspaceLibraryOverlay")) {
+    return;
   }
+
+  // 01｜獨立素材庫按鈕
+  const openButton = document.createElement("button");
+  openButton.id = "mindspaceOpenLibrary";
+  openButton.type = "button";
+  openButton.textContent = "☁️ 素材庫";
+  openButton.setAttribute("aria-label", "開啟雲端素材庫");
+
+  Object.assign(openButton.style, {
+    position: "fixed",
+    left: "20px",
+    bottom: "20px",
+    zIndex: "39",
+    border: "none",
+    borderRadius: "18px",
+    padding: "14px 20px",
+    background: "#ffffff",
+    color: "#26364b",
+    fontSize: "16px",
+    fontWeight: "bold",
+    boxShadow: "0 5px 20px #0002",
+    cursor: "pointer"
+  });
+
+  document.body.appendChild(openButton);
+
+  // 02｜素材庫獨立視窗
+  const overlay = document.createElement("div");
+  overlay.id = "mindspaceLibraryOverlay";
+
+  Object.assign(overlay.style, {
+    position: "fixed",
+    inset: "0",
+    zIndex: "120",
+    display: "none",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "16px",
+    background: "rgba(9,24,44,0.65)"
+  });
+
+  const panel = document.createElement("div");
+
+  Object.assign(panel.style, {
+    width: "min(960px, 100%)",
+    maxHeight: "90dvh",
+    minHeight: "min(500px, 80dvh)",
+    display: "flex",
+    flexDirection: "column",
+    background: "#ffffff",
+    borderRadius: "24px",
+    overflow: "hidden",
+    boxShadow: "0 15px 50px #0003"
+  });
+
+  // 03｜標題列
+  const header = document.createElement("div");
+
+  Object.assign(header.style, {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    padding: "18px 22px",
+    borderBottom: "1px solid #e7edf4",
+    flexShrink: "0"
+  });
+
+  const heading = document.createElement("h2");
+  heading.textContent = "☁️ Mindspace 雲端素材庫";
+
+  Object.assign(heading.style, {
+    margin: "0",
+    fontSize: "20px",
+    color: "#26364b"
+  });
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.textContent = "✕";
+  closeButton.setAttribute("aria-label", "關閉素材庫");
+
+  Object.assign(closeButton.style, {
+    width: "40px",
+    height: "40px",
+    border: "none",
+    borderRadius: "50%",
+    background: "#f1f5f9",
+    color: "#26364b",
+    fontSize: "20px",
+    cursor: "pointer"
+  });
+
+  header.append(heading, closeButton);
+
+  // 04｜素材庫內容
+  const content = document.createElement("div");
+
+  Object.assign(content.style, {
+    flex: "1",
+    minHeight: "0",
+    overflowY: "auto",
+    overflowX: "hidden",
+    padding: "22px"
+  });
+
+  const description = document.createElement("p");
+  description.textContent =
+    "每個孩子創造的積木角色與環境，都可以保存在這裡，並重新加入想像世界。";
+
+  Object.assign(description.style, {
+    margin: "0 0 16px",
+    color: "#65788d",
+    lineHeight: "1.7"
+  });
+
+  refreshButton = document.createElement("button");
+  refreshButton.type = "button";
+  refreshButton.textContent = "🔄 重新整理素材庫";
+  refreshButton.className = "action";
+
+  galleryStatus = document.createElement("p");
+  galleryStatus.textContent = "正在準備雲端素材庫……";
+  galleryStatus.setAttribute("aria-live", "polite");
+
+  Object.assign(galleryStatus.style, {
+    fontSize: "13px",
+    color: "#65788d",
+    margin: "12px 0"
+  });
+
+  galleryGrid = document.createElement("div");
+  galleryGrid.id = "mindspaceGalleryGrid";
+
+  Object.assign(galleryGrid.style, {
+    display: "grid",
+    gridTemplateColumns:
+      "repeat(auto-fill, minmax(150px, 1fr))",
+    gap: "14px",
+    marginTop: "16px"
+  });
+
+  content.append(
+    description,
+    refreshButton,
+    galleryStatus,
+    galleryGrid
+  );
+
+  panel.append(header, content);
+  overlay.appendChild(panel);
+  document.body.appendChild(overlay);
+
+  // 05｜開啟素材庫
+  function openGallery() {
+    overlay.style.display = "flex";
+    void refreshGallery();
+  }
+
+  // 06｜關閉素材庫
+  function closeGallery() {
+    overlay.style.display = "none";
+  }
+
+  openButton.addEventListener("click", openGallery);
+  closeButton.addEventListener("click", closeGallery);
+
+  overlay.addEventListener("click", event => {
+    if (event.target === overlay) {
+      closeGallery();
+    }
+  });
+
+  document.addEventListener("keydown", event => {
+    if (
+      event.key === "Escape" &&
+      overlay.style.display === "flex"
+    ) {
+      closeGallery();
+    }
+  });
+
+  refreshButton.addEventListener(
+    "click",
+    refreshGallery
+  );
+
+  // 07｜提供其他程式呼叫
+  window.openMindspaceGallery = openGallery;
+  window.closeMindspaceGallery = closeGallery;
+
+  librarySection = panel;
+}
 
   // =====================================
   // 02｜圖片轉換
@@ -478,9 +606,7 @@
       restoring = false;
     }
 
-    document
-      .getElementById("sidebar")
-      ?.classList.remove("open");
+window.closeMindspaceGallery?.();
 
     const bubble =
       document.getElementById("speechBubble");

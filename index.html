@@ -2757,6 +2757,28 @@ window.updateMindspaceCount = count => {
         " 個積木作品。";
 };
 
+$("removeSelectedCreation").onclick = () => {
+  const id = window.mindspaceSelectedId;
+
+  if (!id) {
+    alert("請先點選世界中要移除的積木！");
+    return;
+  }
+
+  if (!confirm("確定要從目前世界移除這個積木嗎？雲端原始素材會保留。")) {
+    return;
+  }
+
+  const removed = window.removeMindspaceCreation?.(id);
+
+  if (removed) {
+    updateCommandSelection();
+    setCommandStatus("積木已從目前世界移除，雲端素材仍然保留。");
+  } else {
+    alert("找不到要移除的積木。");
+  }
+};
+
 $("clearWorld").onclick = () => {
   if (
     !confirm(

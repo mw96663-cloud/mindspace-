@@ -654,8 +654,13 @@ async function createAssetCard(asset) {
     );
 
     // 先讓原始積木立即進入世界。
+   
+    // 將原始積木加入拖曳指定的位置
     const creationId =
-      await window.addMindspaceCreation(dataURL);
+      await window.addMindspaceCreation(
+        dataURL,
+        dropPosition
+      );
 
     const creation =
       window.mindspaceCreations?.find(
@@ -681,7 +686,6 @@ async function createAssetCard(asset) {
       restoring = false;
     }
 
-window.closeMindspaceGallery?.();
 
     const bubble =
       document.getElementById("speechBubble");

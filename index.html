@@ -6271,7 +6271,69 @@ stopButton.onclick = stopGuide;
   );
 })();
 </script>
+<script>
+window.addEventListener("load", () => {
+  const btn = document.createElement("button");
 
+  btn.textContent = "☁️ 測試 Firebase 上傳";
+
+  Object.assign(btn.style, {
+    position: "fixed",
+    left: "20px",
+    bottom: "20px",
+    zIndex: "99999",
+    padding: "15px",
+    background: "#ffcf5d",
+    color: "#26364b",
+    borderRadius: "12px",
+    fontWeight: "bold",
+    cursor: "pointer"
+  });
+
+  document.body.appendChild(btn);
+
+  btn.onclick = async () => {
+    btn.disabled = true;
+    btn.textContent = "☁️ 上傳測試中...";
+
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 128;
+      canvas.height = 128;
+
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffcc55";
+      ctx.fillRect(24, 24, 80, 80);
+
+      const pngBlob = await new Promise(resolve => {
+        canvas.toBlob(resolve, "image/png");
+      });
+
+      const result = await window.MindspaceLibrary.saveAsset({
+        pngBlob,
+        name: "Mindspace雲端測試",
+        type: "character",
+        creatorName: "測試",
+        sourceWorld: "free"
+      });
+
+      console.log("雲端上傳成功", result);
+
+      btn.textContent = "✅ 雲端上傳成功";
+      alert("Firebase 上傳成功！\n作品 ID：" + result.id);
+
+    } catch (error) {
+      console.error("雲端上傳失敗", error);
+
+      btn.textContent = "❌ 上傳失敗";
+      alert("上傳失敗：\n" + error.message);
+
+    } finally {
+      btn.disabled = false;
+    }
+  };
+});
+</script>
 </body>
 </html>
 

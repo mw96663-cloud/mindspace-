@@ -907,17 +907,17 @@ window.addMindspaceCreation = function(dataURL, dropPosition = null) {
              // Mindspace｜橫式與 9:16 直式螢幕自適應
         const isPortrait = height > width;
 
-        const maxSize = isPortrait
-          ? min(
-              width * 0.18,
-              height * 0.15,
-              190
-            )
-          : min(
-              width * 0.486,
-              height * 0.612,
-              468
-            );
+      const maxSize = isPortrait
+  ? min(
+      width * 0.18,
+      height * 0.15,
+      190
+    )
+  : min(
+      width * 0.25,
+      height * 0.35,
+      220
+    );
 
         const scale = min(
           maxSize / img.width,

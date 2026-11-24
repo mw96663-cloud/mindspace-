@@ -1731,33 +1731,72 @@ function updateAllLevelStates() {
   // =====================================
 
  
+
 function selectLevel(level) {
+
   if (unlockingFood) return;
 
   // 食物王國：需要星星解鎖
   if (level.id === "food" && !foodUnlocked) {
+
     openUnlockModal();
+
     return;
   }
 
   // 其他尚未開放的關卡
   if (!isLevelUnlocked(level)) {
+
     showNotice(
       "🔒 " + level.name + " 尚未解鎖！"
     );
+
     return;
   }
 
   selectedTheme = level.id;
 
+  // =====================================
+  // 動物世界：獨立互動地圖
+  // 不進入自由創作
+  // =====================================
+
+  if (level.id === "zoo") {
+
+    if (
+      window.MindspaceAnimalWorld &&
+      typeof window.MindspaceAnimalWorld.open
+        === "function"
+    ) {
+
+      window.MindspaceAnimalWorld.open();
+
+    } else {
+
+      console.error(
+        "[Mindspace] 動物世界尚未載入"
+      );
+
+      showNotice(
+        "動物世界載入失敗，請重新整理！"
+      );
+    }
+
+    return;
+  }
+
+  // 原本的主題選擇事件
   window.dispatchEvent(
-    new CustomEvent("mindspace:theme-selected", {
-      detail: {
-        id: level.id,
-        name: level.name,
-        theme: level.id
+    new CustomEvent(
+      "mindspace:theme-selected",
+      {
+        detail: {
+          id: level.id,
+          name: level.name,
+          theme: level.id
+        }
       }
-    })
+    )
   );
 
   console.info(
@@ -1765,13 +1804,16 @@ function selectLevel(level) {
     level.name
   );
 
-  // 小小迷宮設計師：進入獨立 V5 遊戲
+  // 小小迷宮設計師：維持原本獨立入口
   if (level.id === "maze") {
-    window.location.href = "./maze-test.html";
+
+    window.location.href =
+      "./maze-test.html";
+
     return;
   }
 
-  // 其他關卡：維持原本的 Plus-Plus 創作世界
+  // 其他關卡：維持原本的創作世界
   enterMode("free", level.id);
 }
 

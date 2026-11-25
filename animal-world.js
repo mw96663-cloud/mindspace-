@@ -630,6 +630,174 @@
       }
 
     `;
+    
+// ==========================================
+// 動物世界｜滿版地圖介面
+// ==========================================
+
+style.textContent += `
+
+  #animalWorldRoot {
+
+    width: 100vw;
+    height: 100dvh;
+
+    overflow: hidden;
+
+    margin: 0;
+    padding: 0;
+  }
+
+  #animalWorldRoot .aw-layout {
+
+    position: relative;
+
+    width: 100%;
+    height: 100%;
+
+    min-height: 0;
+
+    margin: 0;
+    padding: 0;
+    gap: 0;
+
+    display: block;
+  }
+
+  #animalWorldRoot .aw-map {
+
+    position: absolute;
+
+    inset: 0;
+
+    width: 100%;
+    height: 100%;
+
+    max-width: none;
+
+    aspect-ratio: auto;
+
+    margin: 0;
+    padding: 0;
+  }
+
+  #animalWorldRoot .aw-map-image {
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: fill;
+
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  #animalWorldRoot .aw-toolbar {
+
+    position: absolute;
+
+    top: 14px;
+    left: 14px;
+    right: 14px;
+
+    width: auto;
+
+    z-index: 20;
+
+    pointer-events: none;
+  }
+
+  #animalWorldRoot .aw-toolbar button {
+
+    pointer-events: auto;
+  }
+
+  #animalWorldRoot .aw-panel {
+
+    position: absolute;
+
+    left: 50%;
+    bottom: 14px;
+
+    transform: translateX(-50%);
+
+    width: min(
+      calc(100% - 28px),
+      680px
+    );
+
+    padding: 10px 16px;
+
+    border-radius: 20px;
+
+    background: rgba(255,255,255,.92);
+
+    backdrop-filter: blur(10px);
+
+    z-index: 20;
+  }
+
+  /* 尚未選擇園區時隱藏操作面板 */
+
+  #animalWorldRoot .aw-panel:has(
+    #awScan:disabled
+  ):not(:has(
+    #awReplay:not(:disabled)
+  )) {
+
+    display: none;
+  }
+
+  #animalWorldRoot .aw-speaker {
+
+    max-width: 120px;
+  }
+
+  #animalWorldRoot .aw-title {
+
+    font-size: 19px;
+    margin: 0 0 4px;
+  }
+
+  #animalWorldRoot .aw-description {
+
+    font-size: 14px;
+    margin: 2px 0;
+  }
+
+  #animalWorldRoot .aw-actions {
+
+    margin-top: 6px;
+  }
+
+  #animalWorldRoot .aw-status {
+
+    font-size: 12px;
+    margin-top: 4px;
+  }
+
+  @media (max-width: 700px) {
+
+    #animalWorldRoot .aw-toolbar {
+
+      top: 8px;
+      left: 8px;
+      right: 8px;
+    }
+
+    #animalWorldRoot .aw-panel {
+
+      bottom: 8px;
+      padding: 8px 12px;
+    }
+
+    #animalWorldRoot .aw-speaker {
+
+      min-width: 44px;
+    }
+  }
+
+`;
 
     document.head.appendChild(style);
   }

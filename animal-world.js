@@ -764,10 +764,22 @@
 
     replayButton.disabled = true;
 
-    actions.appendChild(
-      replayButton
-    );
+   const scanButton = makeButton(
+  "📷 掃描我的積木",
+  requestAnimalScan,
+  "aw-replay"
+);
 
+scanButton.id = "awScan";
+
+scanButton.disabled = true;
+
+scanButton.style.background = "#8bcf91";
+
+actions.append(
+  replayButton,
+  scanButton
+);
     const status = el(
       "p",
       "aw-status"
@@ -944,7 +956,57 @@
   // =========================================
   // 11. 選擇園區
   // =========================================
+  // =========================================
+// 動物世界｜正式掃描入口
+// =========================================
 
+function requestAnimalScan() {
+
+  if (!currentZone) {
+
+    setStatus(
+      "請先選擇想探索的園區。",
+      true
+    );
+
+    return;
+  }
+
+  if (
+    !window.MindspaceAnimalHabitat ||
+    !window.MindspaceLibrary
+  ) {
+
+    setStatus(
+      "棲地系統尚未載入，請重新整理。",
+      true
+    );
+
+    return;
+  }
+
+  stopSound();
+
+  window.dispatchEvent(
+
+    new CustomEvent(
+
+      "mindspace-animal-scan-requested",
+
+      {
+        detail: {
+
+          zoneId: currentZone.id,
+
+          soundId:
+            currentSound?.id || "",
+
+          sourceWorld: "animal"
+        }
+      }
+    )
+  );
+}
   function selectZone(zone) {
 
     stopSound();
@@ -993,7 +1055,8 @@
 
     getElement("awReplay")
       .disabled = !currentSound;
-
+getElement("awScan")
+  .disabled = false;
     if (!currentSound) {
 
       setStatus(
@@ -1268,7 +1331,8 @@
 
     getElement("awReplay")
       .disabled = true;
-
+getElement("awScan")
+  .disabled = true;
     setStatus("");
 
     const mapImage =

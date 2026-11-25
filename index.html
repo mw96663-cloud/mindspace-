@@ -1443,6 +1443,338 @@ async function stopCamera() {
   $("cameraVideo").srcObject = null;
 }
 
+// ==========================================
+// Mindspace｜動物世界掃描管理
+// ==========================================
+
+let animalScanContext = null;
+
+let animalScanSaving = false;
+
+const animalScanModalStyles = new Map();
+
+// 將原有相機及修圖視窗提高至動物世界上方。
+
+function raiseAnimalScanModals() {
+
+  for (const id of [
+    "cameraModal",
+    "editorModal"
+  ]) {
+
+    const modal =
+      document.getElementById(id);
+
+    if (!modal) continue;
+
+    if (!animalScanModalStyles.has(id)) {
+
+      animalScanModalStyles.set(
+        id,
+        modal.style.zIndex
+      );
+    }
+
+    modal.style.zIndex = "10000";
+  }
+}
+
+// 恢復原本自由創作的視窗層級。
+
+function restoreAnimalScanModals() {
+
+  for (
+    const [id, oldZIndex]
+    of animalScanModalStyles
+  ) {
+
+    const modal =
+      document.getElementById(id);
+
+    if (modal) {
+
+      modal.style.zIndex = oldZIndex;
+    }
+  }
+
+  animalScanModalStyles.clear();
+}
+
+// 結束本次動物掃描。
+// 不刪除任何 Firebase 作品。
+
+function clearAnimalScanContext() {
+
+  animalScanContext = null;
+
+  restoreAnimalScanModals();
+}
+
+// 接收動物園地圖或棲地發出的掃描請求。
+
+window.addEventListener(
+
+  "mindspace-animal-scan-requested",
+
+  async event => {
+
+    if (
+      animalScanContext ||
+      animalScanSaving ||
+      processing
+    ) return;
+
+    const detail = event.detail || {};
+
+    const validZones = [
+      "rainforest",
+      "temperate",
+      "aviary",
+      "kids_zoo"
+    ];
+
+    if (
+      !validZones.includes(detail.zoneId)
+    ) {
+
+      alert("無法辨識動物園區。");
+
+      return;
+    }
+
+    if (
+      !window.MindspaceAnimalHabitat ||
+      !window.MindspaceLibrary
+    ) {
+
+      alert("動物世界尚未準備完成。");
+
+      return;
+    }
+
+    // 每次掃描使用獨立作品 ID。
+    // 儲存失敗重試時沿用同一 ID。
+
+    animalScanContext = {
+
+      id: crypto.randomUUID(),
+
+      zoneId: detail.zoneId,
+
+      soundId: detail.soundId || "",
+
+      sourceWorld: "animal",
+
+      previousEngine:
+        $("removeBgEngine").value
+    };
+
+    raiseAnimalScanModals();
+
+    // 動物世界預設使用真正 OpenAI 去背。
+    // 不移除原本的 remove.bg 選項。
+
+    $("removeBgEngine").value =
+      "removeBackgroundAI";
+
+    try {
+
+      await startCamera();
+
+    } catch (error) {
+
+      finishAnimalScan();
+
+      alert(
+        "相機開啟失敗：" + error.message
+      );
+    }
+  }
+);
+
+// 完成或取消掃描時恢復原本引擎設定。
+
+function finishAnimalScan() {
+
+  if (
+    animalScanContext?.previousEngine
+  ) {
+
+    $("removeBgEngine").value =
+      animalScanContext.previousEngine;
+  }
+
+  clearAnimalScanContext();
+}
+
+// ==========================================
+// 將修整完成的原始 PNG 加入動物棲地
+// ==========================================
+
+async function saveAnimalEditorCreation() {
+
+  if (
+    !animalScanContext ||
+    animalScanSaving ||
+    !editReady ||
+    processing
+  ) return;
+
+  const context = {
+    ...animalScanContext
+  };
+
+  const habitat =
+    window.MindspaceAnimalHabitat;
+
+  if (!habitat) {
+
+    throw new Error(
+      "動物棲地尚未載入"
+    );
+  }
+
+  animalScanSaving = true;
+
+  const button = $("saveEditor");
+
+  button.disabled = true;
+
+  const originalText =
+    button.textContent;
+
+  button.textContent =
+    "正在加入共同棲地……";
+
+  try {
+
+    const png =
+      editCanvas.toDataURL("image/png");
+
+    // 先檢查 PNG 是否符合雲端儲存限制。
+
+    const response = await fetch(png);
+
+    const pngBlob = await response.blob();
+
+    if (
+      pngBlob.size <= 0 ||
+      pngBlob.size > 5 * 1024 * 1024
+    ) {
+
+      throw new Error(
+        "作品圖片大小不可超過 5 MB"
+      );
+    }
+
+    // 不進入原本自由創作的角色陣列。
+    // 不呼叫原本的 AI 分類視窗。
+
+    await habitat.open(
+      context.zoneId,
+      context.soundId
+    );
+
+    // 啟動獨立棲地新增流程。
+    // addCreation 會先顯示原始 PNG，
+    // 再進行 Firebase 永久儲存。
+
+    const saveTask = habitat.addCreation({
+
+      id: context.id,
+
+      png: pngBlob,
+
+      zoneId: context.zoneId,
+
+      soundId: context.soundId,
+
+      name: "我的積木生物",
+
+      type: "character"
+    });
+
+    // 防止 Promise 在等待畫面確認時
+    // 產生未處理的拒絕事件。
+
+    void saveTask.catch(() => {});
+
+    // 確認作品已進入棲地的本地待儲存狀態，
+    // 或已成功儲存，才關閉修圖視窗。
+
+    let saved = false;
+
+    let saveError = null;
+
+    saveTask.then(
+      () => {
+        saved = true;
+      },
+      error => {
+        saveError = error;
+      }
+    );
+
+    while (
+      !saved &&
+      !saveError &&
+      habitat.getPendingCount() === 0
+    ) {
+
+      await new Promise(
+        resolve => setTimeout(resolve, 50)
+      );
+    }
+
+    if (
+      saveError &&
+      habitat.getPendingCount() === 0
+    ) {
+
+      throw saveError;
+    }
+
+    closeModal("editorModal");
+
+    $("sidebar").classList.remove("open");
+
+    currentPhoto = "";
+
+    editReady = false;
+
+    finishAnimalScan();
+
+    // 如果 Firebase 上傳失敗，
+    // 棲地會保留原始 PNG 及重試按鈕。
+
+    try {
+
+      await saveTask;
+
+      console.info(
+        "[Mindspace Animal] 作品永久儲存成功",
+        context.id,
+        context.zoneId
+      );
+
+    } catch (error) {
+
+      console.error(
+        "[Mindspace Animal] 等待重新儲存",
+        error
+      );
+    }
+
+  } finally {
+
+    animalScanSaving = false;
+
+    button.disabled = false;
+
+    button.textContent = originalText;
+  }
+}
+
 async function startCamera() {
   openModal("cameraModal");
 
@@ -1496,8 +1828,15 @@ $("switchCamera").onclick = async () => {
 };
 
 $("closeCamera").onclick = async () => {
+
   await stopCamera();
+
   closeModal("cameraModal");
+
+  if (animalScanContext) {
+
+    finishAnimalScan();
+  }
 };
 
 $("captureButton").onclick = async () => {
@@ -2187,7 +2526,27 @@ $("resetEdit").onclick = () => {
 ===================================================== */
 
 $("saveEditor").onclick = async () => {
-  if (!editReady) return;
+
+  if (!editReady || processing) return;
+
+  // 動物世界使用獨立棲地。
+
+  if (animalScanContext) {
+
+    try {
+
+      await saveAnimalEditorCreation();
+
+    } catch (error) {
+
+      $("editorMessage").textContent =
+        "加入動物棲地失敗：" + error.message;
+    }
+
+    return;
+  }
+
+  // 以下保留原本自由創作流程。
 
   const button = $("saveEditor");
 
@@ -2260,9 +2619,18 @@ $("saveEditor").onclick = async () => {
 };
 
 $("closeEditor").onclick = () => {
-  if (processing) return;
+
+  if (
+    processing ||
+    animalScanSaving
+  ) return;
 
   closeModal("editorModal");
+
+  if (animalScanContext) {
+
+    finishAnimalScan();
+  }
 };
 
 /* =====================================================

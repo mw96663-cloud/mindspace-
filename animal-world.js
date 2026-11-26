@@ -1,16 +1,18 @@
-
 /* =====================================================
-   Mindspace｜動物世界 V2
-   Plus-Plus 互動動物園地圖
+   Mindspace｜動物世界 V3
+   Plus-Plus 聲音感官啟發互動系統
 
    功能：
-   1. Plus-Plus 動物園地圖
+   1. 滿版 Plus-Plus 動物園地圖
    2. 四個獨立喇叭按鈕
-   3. 各園區隨機動物聲音
-   4. 同一探索階段重複播放相同聲音
-   5. 點擊及播放動畫
-   6. 返回神秘題目選單
-   7. 預留掃描、p5.js、Firebase 整合接口
+   3. 每個園區三種真實動物聲音
+   4. 支援 MP3、M4A 混合播放
+   5. 同一探索階段重複播放相同聲音
+   6. 真實聲音播放動畫
+   7. 完整聽完聲音才能解鎖掃描
+   8. 播放失敗時禁止掃描
+   9. 重新探索時重新隨機抽取
+   10. 保留相機、p5.js、Firebase 串接
 
    不修改：
    自由創作、迷宮、星星、解鎖、
@@ -34,21 +36,20 @@
 
   // =========================================
   // 02. 建立聲音資料
+  // 支援 MP3、M4A
   // =========================================
 
-  function createSound(id) {
+  function createSound(id, extension = "mp3") {
     return {
       id: id,
       label: "神秘聲音",
-      file: ASSETS.sounds + id + ".mp3"
+      file: ASSETS.sounds + id + "." + extension
     };
   }
 
   // =========================================
   // 03. 四個園區
-  //
-  // x、y：喇叭中心百分比座標
-  // size：喇叭占地圖寬度的百分比
+  // 每個園區三種動物聲音
   // =========================================
 
   const ZONES = [
@@ -61,10 +62,9 @@
       color: "#d7efc8",
 
       sounds: [
-        createSound("monkey"),
-        createSound("tiger"),
-        createSound("frog"),
-        createSound("elephant")
+        createSound("monkey", "m4a"),
+        createSound("frog", "mp3"),
+        createSound("elephant", "m4a")
       ]
     },
 
@@ -77,10 +77,9 @@
       color: "#f0dfbf",
 
       sounds: [
-        createSound("wolf"),
-        createSound("bear"),
-        createSound("deer"),
-        createSound("fox")
+        createSound("horse", "mp3"),
+        createSound("cow", "mp3"),
+        createSound("pig", "mp3")
       ]
     },
 
@@ -93,10 +92,9 @@
       color: "#c7eaf1",
 
       sounds: [
-        createSound("parrot"),
-        createSound("owl"),
-        createSound("peacock"),
-        createSound("sparrow")
+        createSound("rooster", "mp3"),
+        createSound("duck", "mp3"),
+        createSound("sparrow", "mp3")
       ]
     },
 
@@ -109,27 +107,35 @@
       color: "#f8e8ae",
 
       sounds: [
-        createSound("dog"),
-        createSound("cat"),
-        createSound("sheep"),
-        createSound("chicken")
+        createSound("dog", "mp3"),
+        createSound("cat", "mp3"),
+        createSound("sheep", "mp3")
       ]
     }
   ];
 
   // =========================================
-  // 04. 暫時狀態
+  // 04. 暫時探索狀態
   // 不涉及 Firebase 永久資料
   // =========================================
 
   let root = null;
+
   let currentZone = null;
   let currentSound = null;
+
   let audio = null;
   let playbackToken = 0;
   let activeButton = null;
 
+  let soundCompleted = false;
+
+  let playbackState = "idle";
+
+  let mapLoadFailed = false;
+
   const sessionSounds = new Map();
+
   const speakerButtons = new Map();
 
   // =========================================
@@ -178,11 +184,10 @@
     return root
       ? root.querySelector("#" + id)
       : null;
-
   }
 
   // =========================================
-  // 06. CSS
+  // 06. 滿版地圖 CSS
   // 所有樣式限制在動物世界內
   // =========================================
 
@@ -200,21 +205,20 @@
     style.textContent = `
 
       #animalWorldRoot {
+
         position: fixed;
         inset: 0;
         z-index: 240;
 
-        width: 100%;
+        width: 100vw;
         height: 100dvh;
 
         margin: 0;
         padding: 0;
 
-        overflow-x: hidden;
-        overflow-y: auto;
+        overflow: hidden;
 
         background: #e5edcf;
-
         color: #344b41;
 
         font-family:
@@ -225,6 +229,7 @@
         text-align: center;
 
         overscroll-behavior: contain;
+
         isolation: isolate;
       }
 
@@ -237,17 +242,18 @@
       }
 
       #animalWorldRoot .aw-layout {
+
+        position: relative;
+
         width: 100%;
-        min-height: 100%;
+        height: 100%;
 
-        display: flex;
-        flex-direction: column;
+        min-height: 0;
 
-        align-items: center;
-        justify-content: center;
+        margin: 0;
+        padding: 0;
 
-        padding: 12px 16px;
-        gap: 10px;
+        display: block;
       }
 
       /* ===============================
@@ -256,7 +262,13 @@
 
       #animalWorldRoot .aw-toolbar {
 
-        width: min(100%, 1400px);
+        position: absolute;
+
+        top: 14px;
+        left: 14px;
+        right: 14px;
+
+        width: auto;
 
         display: flex;
 
@@ -265,7 +277,13 @@
 
         gap: 10px;
 
-        flex-shrink: 0;
+        z-index: 20;
+
+        pointer-events: none;
+      }
+
+      #animalWorldRoot .aw-toolbar button {
+        pointer-events: auto;
       }
 
       #animalWorldRoot .aw-control {
@@ -281,7 +299,6 @@
         color: #634321;
 
         font-size: 16px;
-
         font-weight: 900;
 
         box-shadow: 0 4px 0 #cba451;
@@ -310,22 +327,22 @@
       }
 
       /* ===============================
-         動物園地圖
+         滿版動物園地圖
       =============================== */
 
       #animalWorldRoot .aw-map {
 
-        position: relative;
+        position: absolute;
 
-        width: min(
-          100%,
-          1400px,
-          108dvh
-        );
+        inset: 0;
 
-        aspect-ratio: 3 / 2;
+        width: 100%;
+        height: 100%;
 
-        flex-shrink: 0;
+        max-width: none;
+
+        margin: 0;
+        padding: 0;
 
         overflow: visible;
 
@@ -341,10 +358,9 @@
 
         object-fit: fill;
 
-        border-radius: 20px;
+        border-radius: 0;
 
-        box-shadow:
-          0 8px 24px rgba(0,0,0,.15);
+        box-shadow: none;
 
         pointer-events: none;
 
@@ -366,6 +382,8 @@
         aspect-ratio: 1;
 
         height: auto;
+
+        max-width: 120px;
 
         margin: 0;
         padding: 0;
@@ -411,15 +429,11 @@
           );
       }
 
-      /* 滑鼠移入 */
-
       #animalWorldRoot
       .aw-speaker:hover img {
 
         transform: scale(1.13);
       }
-
-      /* 按下喇叭 */
 
       #animalWorldRoot
       .aw-speaker:active img {
@@ -437,7 +451,7 @@
           drop-shadow(0 0 10px #ffd83d);
       }
 
-      /* 真實聲音播放中 */
+      /* 聲音播放中 */
 
       #animalWorldRoot
       .aw-speaker.aw-playing img {
@@ -468,7 +482,7 @@
         border-radius: 50%;
       }
 
-      /* 圖片載入失敗的備用提示 */
+      /* 喇叭圖片載入失敗的備用樣式 */
 
       #animalWorldRoot
       .aw-speaker.aw-image-error {
@@ -484,63 +498,87 @@
       }
 
       /* ===============================
-         下方探索提示
+         下方探索提示面板
       =============================== */
 
       #animalWorldRoot .aw-panel {
 
-        width: min(100%, 1000px);
+        position: absolute;
 
-        flex-shrink: 0;
+        left: 50%;
+        bottom: 14px;
 
-        padding: 10px 18px;
+        transform: translateX(-50%);
+
+        width: min(
+          calc(100% - 28px),
+          680px
+        );
+
+        padding: 10px 16px;
 
         border: 3px solid white;
 
         border-radius: 20px;
 
-        background: rgba(255,255,255,.94);
+        background:
+          rgba(255,255,255,.92);
+
+        backdrop-filter: blur(10px);
 
         box-shadow:
           0 5px 16px rgba(0,0,0,.08);
+
+        z-index: 20;
+      }
+
+      #animalWorldRoot .aw-panel[hidden] {
+        display: none !important;
       }
 
       #animalWorldRoot .aw-title {
 
-        margin: 0 0 5px;
+        margin: 0 0 4px;
 
-        font-size:
-          clamp(17px, 2vw, 23px);
+        font-size: 19px;
 
         font-weight: 900;
       }
 
       #animalWorldRoot .aw-description {
 
-        margin: 4px 0;
+        margin: 2px 0;
 
-        font-size:
-          clamp(13px, 1.5vw, 17px);
+        font-size: 14px;
 
         line-height: 1.6;
       }
 
       #animalWorldRoot .aw-status {
 
-        margin: 5px 0 0;
+        margin: 4px 0 0;
 
         min-height: 20px;
 
-        font-size: 13px;
+        font-size: 12px;
 
         line-height: 1.5;
 
         color: #64745d;
       }
 
-      #animalWorldRoot .aw-status.aw-error {
+      #animalWorldRoot
+      .aw-status.aw-error {
 
         color: #a34b35;
+      }
+
+      #animalWorldRoot
+      .aw-status.aw-success {
+
+        color: #39804a;
+
+        font-weight: 800;
       }
 
       #animalWorldRoot .aw-actions {
@@ -553,7 +591,7 @@
 
         gap: 10px;
 
-        margin-top: 8px;
+        margin-top: 6px;
 
         flex-wrap: wrap;
       }
@@ -577,13 +615,103 @@
         cursor: pointer;
 
         touch-action: manipulation;
+
+        transition:
+          background .2s ease,
+          transform .2s ease,
+          opacity .2s ease;
       }
 
-      #animalWorldRoot .aw-replay:disabled {
+      #animalWorldRoot
+      .aw-replay:not(:disabled):hover {
+
+        transform: translateY(-2px);
+      }
+
+      #animalWorldRoot
+      .aw-replay:disabled {
 
         opacity: .45;
 
         cursor: default;
+
+        transform: none;
+      }
+
+      /* ===============================
+         掃描按鈕狀態
+      =============================== */
+
+      #animalWorldRoot #awScan {
+
+        background: #8bcf91;
+
+        color: #245232;
+      }
+
+      #animalWorldRoot #awScan:disabled {
+
+        background: #d4d8d0;
+
+        color: #687166;
+
+        opacity: .8;
+      }
+
+      #animalWorldRoot
+      #awScan.aw-unlocked {
+
+        background: #8bcf91;
+
+        color: #245232;
+
+        box-shadow:
+          0 3px 0 #62a96a,
+          0 0 12px rgba(139,207,145,.35);
+      }
+
+      /* ===============================
+         聲音播放進度
+      =============================== */
+
+      #animalWorldRoot .aw-progress {
+
+        width: min(100%, 300px);
+
+        height: 7px;
+
+        margin: 10px auto 4px;
+
+        overflow: hidden;
+
+        border-radius: 20px;
+
+        background: #e1e7db;
+      }
+
+      #animalWorldRoot
+      .aw-progress[hidden] {
+
+        display: none !important;
+      }
+
+      #animalWorldRoot .aw-progress-fill {
+
+        width: 0%;
+
+        height: 100%;
+
+        border-radius: 20px;
+
+        background: #e7bb49;
+
+        transition: width .15s linear;
+      }
+
+      #animalWorldRoot
+      .aw-progress-fill.aw-finished {
+
+        background: #8bcf91;
       }
 
       /* ===============================
@@ -592,18 +720,11 @@
 
       @media (max-width: 700px) {
 
-        #animalWorldRoot .aw-layout {
+        #animalWorldRoot .aw-toolbar {
 
-          justify-content: flex-start;
-
-          padding: 10px;
-
-          gap: 12px;
-        }
-
-        #animalWorldRoot .aw-map {
-
-          width: 100%;
+          top: 8px;
+          left: 8px;
+          right: 8px;
         }
 
         #animalWorldRoot .aw-control {
@@ -615,7 +736,31 @@
 
         #animalWorldRoot .aw-panel {
 
-          padding: 12px;
+          bottom: 8px;
+
+          padding: 8px 12px;
+        }
+
+        #animalWorldRoot .aw-speaker {
+
+          min-width: 44px;
+        }
+
+        #animalWorldRoot .aw-title {
+
+          font-size: 17px;
+        }
+
+        #animalWorldRoot .aw-description {
+
+          font-size: 13px;
+        }
+
+        #animalWorldRoot .aw-replay {
+
+          font-size: 13px;
+
+          padding: 9px 12px;
         }
       }
 
@@ -627,177 +772,14 @@
 
           transition: none !important;
         }
+
+        #animalWorldRoot .aw-progress-fill {
+
+          transition: none !important;
+        }
       }
 
     `;
-    
-// ==========================================
-// 動物世界｜滿版地圖介面
-// ==========================================
-
-style.textContent += `
-
-  #animalWorldRoot {
-
-    width: 100vw;
-    height: 100dvh;
-
-    overflow: hidden;
-
-    margin: 0;
-    padding: 0;
-  }
-
-  #animalWorldRoot .aw-layout {
-
-    position: relative;
-
-    width: 100%;
-    height: 100%;
-
-    min-height: 0;
-
-    margin: 0;
-    padding: 0;
-    gap: 0;
-
-    display: block;
-  }
-
-  #animalWorldRoot .aw-map {
-
-    position: absolute;
-
-    inset: 0;
-
-    width: 100%;
-    height: 100%;
-
-    max-width: none;
-
-    aspect-ratio: auto;
-
-    margin: 0;
-    padding: 0;
-  }
-
-  #animalWorldRoot .aw-map-image {
-
-    width: 100%;
-    height: 100%;
-
-    object-fit: fill;
-
-    border-radius: 0;
-    box-shadow: none;
-  }
-
-  #animalWorldRoot .aw-toolbar {
-
-    position: absolute;
-
-    top: 14px;
-    left: 14px;
-    right: 14px;
-
-    width: auto;
-
-    z-index: 20;
-
-    pointer-events: none;
-  }
-
-  #animalWorldRoot .aw-toolbar button {
-
-    pointer-events: auto;
-  }
-
-  #animalWorldRoot .aw-panel {
-
-    position: absolute;
-
-    left: 50%;
-    bottom: 14px;
-
-    transform: translateX(-50%);
-
-    width: min(
-      calc(100% - 28px),
-      680px
-    );
-
-    padding: 10px 16px;
-
-    border-radius: 20px;
-
-    background: rgba(255,255,255,.92);
-
-    backdrop-filter: blur(10px);
-
-    z-index: 20;
-  }
-
-  /* 尚未選擇園區時隱藏操作面板 */
-
-  #animalWorldRoot .aw-panel:has(
-    #awScan:disabled
-  ):not(:has(
-    #awReplay:not(:disabled)
-  )) {
-
-    display: none;
-  }
-
-  #animalWorldRoot .aw-speaker {
-
-    max-width: 120px;
-  }
-
-  #animalWorldRoot .aw-title {
-
-    font-size: 19px;
-    margin: 0 0 4px;
-  }
-
-  #animalWorldRoot .aw-description {
-
-    font-size: 14px;
-    margin: 2px 0;
-  }
-
-  #animalWorldRoot .aw-actions {
-
-    margin-top: 6px;
-  }
-
-  #animalWorldRoot .aw-status {
-
-    font-size: 12px;
-    margin-top: 4px;
-  }
-
-  @media (max-width: 700px) {
-
-    #animalWorldRoot .aw-toolbar {
-
-      top: 8px;
-      left: 8px;
-      right: 8px;
-    }
-
-    #animalWorldRoot .aw-panel {
-
-      bottom: 8px;
-      padding: 8px 12px;
-    }
-
-    #animalWorldRoot .aw-speaker {
-
-      min-width: 44px;
-    }
-  }
-
-`;
 
     document.head.appendChild(style);
   }
@@ -828,7 +810,7 @@ style.textContent += `
       "aw-layout"
     );
 
-    // 上方操作按鈕
+    // 上方操作區
 
     const toolbar = el(
       "div",
@@ -874,8 +856,24 @@ style.textContent += `
     mapImage.draggable = false;
 
     mapImage.addEventListener(
+      "load",
+      () => {
+
+        mapLoadFailed = false;
+
+        if (!currentZone) {
+          setPanelVisible(false);
+        }
+      }
+    );
+
+    mapImage.addEventListener(
       "error",
       () => {
+
+        mapLoadFailed = true;
+
+        setPanelVisible(true);
 
         setStatus(
           "地圖載入失敗，請確認圖片路徑。",
@@ -886,11 +884,8 @@ style.textContent += `
           "[Animal World] Map missing:",
           ASSETS.map
         );
-
       }
     );
-
-    mapImage.src = ASSETS.map;
 
     map.appendChild(mapImage);
 
@@ -900,6 +895,10 @@ style.textContent += `
       "div",
       "aw-panel"
     );
+
+    panel.id = "awPanel";
+
+    panel.hidden = true;
 
     const title = el(
       "h2",
@@ -917,6 +916,56 @@ style.textContent += `
 
     description.id = "awDescription";
 
+    // 聲音播放進度
+
+    const progress = el(
+      "div",
+      "aw-progress"
+    );
+
+    progress.id = "awProgress";
+
+    progress.hidden = true;
+
+    progress.setAttribute(
+      "role",
+      "progressbar"
+    );
+
+    progress.setAttribute(
+      "aria-label",
+      "聲音播放進度"
+    );
+
+    progress.setAttribute(
+      "aria-valuemin",
+      "0"
+    );
+
+    progress.setAttribute(
+      "aria-valuemax",
+      "100"
+    );
+
+    progress.setAttribute(
+      "aria-valuenow",
+      "0"
+    );
+
+    const progressFill = el(
+      "div",
+      "aw-progress-fill"
+    );
+
+    progressFill.id =
+      "awProgressFill";
+
+    progress.appendChild(
+      progressFill
+    );
+
+    // 操作按鈕
+
     const actions = el(
       "div",
       "aw-actions"
@@ -932,22 +981,23 @@ style.textContent += `
 
     replayButton.disabled = true;
 
-   const scanButton = makeButton(
-  "📷 掃描我的積木",
-  requestAnimalScan,
-  "aw-replay"
-);
+    const scanButton = makeButton(
+      "🔒 聽完聲音後解鎖",
+      requestAnimalScan,
+      "aw-replay"
+    );
 
-scanButton.id = "awScan";
+    scanButton.id = "awScan";
 
-scanButton.disabled = true;
+    scanButton.disabled = true;
 
-scanButton.style.background = "#8bcf91";
+    actions.append(
+      replayButton,
+      scanButton
+    );
 
-actions.append(
-  replayButton,
-  scanButton
-);
+    // 狀態提示
+
     const status = el(
       "p",
       "aw-status"
@@ -968,6 +1018,7 @@ actions.append(
     panel.append(
       title,
       description,
+      progress,
       actions,
       status
     );
@@ -983,6 +1034,8 @@ actions.append(
     document.body.appendChild(root);
 
     createSpeakerButtons(map);
+
+    mapImage.src = ASSETS.map;
   }
 
   // =========================================
@@ -1046,7 +1099,6 @@ actions.append(
             "[Animal World] Speaker missing:",
             ASSETS.speaker
           );
-
         }
       );
 
@@ -1069,7 +1121,8 @@ actions.append(
 
   function setStatus(
     message,
-    isError = false
+    isError = false,
+    isSuccess = false
   ) {
 
     const status =
@@ -1083,10 +1136,147 @@ actions.append(
       "aw-error",
       isError
     );
+
+    status.classList.toggle(
+      "aw-success",
+      isSuccess && !isError
+    );
+  }
+
+  function setPanelVisible(visible) {
+
+    const panel =
+      getElement("awPanel");
+
+    if (!panel) return;
+
+    panel.hidden = !visible;
   }
 
   // =========================================
-  // 10. 隨機選擇園區聲音
+  // 10. 播放進度控制
+  // =========================================
+
+  function setProgressVisible(visible) {
+
+    const progress =
+      getElement("awProgress");
+
+    if (!progress) return;
+
+    progress.hidden = !visible;
+  }
+
+  function setProgress(
+    value,
+    finished = false
+  ) {
+
+    const progress =
+      getElement("awProgress");
+
+    const fill =
+      getElement("awProgressFill");
+
+    if (!progress || !fill) return;
+
+    const percent = Math.max(
+      0,
+      Math.min(
+        100,
+        Number(value) || 0
+      )
+    );
+
+    fill.style.width =
+      percent + "%";
+
+    progress.setAttribute(
+      "aria-valuenow",
+      String(Math.round(percent))
+    );
+
+    fill.classList.toggle(
+      "aw-finished",
+      finished
+    );
+  }
+
+  // =========================================
+  // 11. 掃描按鈕鎖定及解鎖
+  // =========================================
+
+  function lockScan() {
+
+    soundCompleted = false;
+
+    const button =
+      getElement("awScan");
+
+    if (!button) return;
+
+    button.disabled = true;
+
+    button.textContent =
+      "🔒 聽完聲音後解鎖";
+
+    button.classList.remove(
+      "aw-unlocked"
+    );
+  }
+
+  function unlockScan() {
+
+    if (
+      !currentZone ||
+      !currentSound ||
+      playbackState !== "completed"
+    ) return;
+
+    soundCompleted = true;
+
+    const button =
+      getElement("awScan");
+
+    if (!button) return;
+
+    button.disabled = false;
+
+    button.textContent =
+      "📷 掃描我的積木";
+
+    button.classList.add(
+      "aw-unlocked"
+    );
+  }
+
+  // =========================================
+  // 12. 更新重播按鈕
+  // =========================================
+
+  function updateReplayButton() {
+
+    const button =
+      getElement("awReplay");
+
+    if (!button) return;
+
+    button.disabled = !currentSound;
+
+    if (playbackState === "error") {
+
+      button.textContent =
+        "🔊 再試一次";
+
+    } else {
+
+      button.textContent =
+        "🔊 再聽一次";
+    }
+  }
+
+  // =========================================
+  // 13. 隨機選擇園區聲音
   //
   // 同一次探索中，同一園區
   // 保留第一次抽到的聲音。
@@ -1095,6 +1285,7 @@ actions.append(
   function getRandomSound(zone) {
 
     if (!zone.sounds.length) {
+
       return null;
     }
 
@@ -1122,62 +1313,100 @@ actions.append(
   }
 
   // =========================================
-  // 11. 選擇園區
+  // 14. 動物世界正式掃描入口
   // =========================================
-  // =========================================
-// 動物世界｜正式掃描入口
-// =========================================
 
-function requestAnimalScan() {
+  function requestAnimalScan() {
 
-  if (!currentZone) {
+    if (
+      !currentZone ||
+      !currentSound
+    ) {
+
+      setStatus(
+        "請先選擇想探索的園區。",
+        true
+      );
+
+      return;
+    }
+
+    // 必須真的完整播放完畢
+
+    if (
+      !soundCompleted ||
+      playbackState !== "completed"
+    ) {
+
+      setStatus(
+        "請先完整聽完神秘聲音。",
+        true
+      );
+
+      return;
+    }
+
+    // 確認既有棲地及雲端系統
+
+    if (
+      !window.MindspaceAnimalHabitat ||
+      !window.MindspaceLibrary
+    ) {
+
+      setStatus(
+        "棲地系統尚未載入，請重新整理。",
+        true
+      );
+
+      return;
+    }
+
+    const scanDetail = {
+
+      zoneId: currentZone.id,
+
+      soundId: currentSound.id,
+
+      sourceWorld: "animal"
+    };
+
+    // 停止聲音，但保留已完成狀態
+    // 取消相機後仍可重新掃描
+
+    stopSound();
 
     setStatus(
-      "請先選擇想探索的園區。",
+      "準備掃描你的積木作品！",
+      false,
       true
     );
 
-    return;
-  }
+    // 保留原本 index.html 使用的事件
 
-  if (
-    !window.MindspaceAnimalHabitat ||
-    !window.MindspaceLibrary
-  ) {
+    window.dispatchEvent(
 
-    setStatus(
-      "棲地系統尚未載入，請重新整理。",
-      true
-    );
+      new CustomEvent(
 
-    return;
-  }
+        "mindspace-animal-scan-requested",
 
-  stopSound();
-
-  window.dispatchEvent(
-
-    new CustomEvent(
-
-      "mindspace-animal-scan-requested",
-
-      {
-        detail: {
-
-          zoneId: currentZone.id,
-
-          soundId:
-            currentSound?.id || "",
-
-          sourceWorld: "animal"
+        {
+          detail: scanDetail
         }
-      }
-    )
-  );
-}
+      )
+    );
+  }
+
+  // =========================================
+  // 15. 選擇園區
+  // =========================================
+
   function selectZone(zone) {
 
     stopSound();
+
+    lockScan();
+
+    playbackState = "idle";
 
     currentZone = zone;
 
@@ -1214,6 +1443,8 @@ function requestAnimalScan() {
       );
     }
 
+    setPanelVisible(true);
+
     getElement("awTitle")
       .textContent = zone.title;
 
@@ -1221,11 +1452,15 @@ function requestAnimalScan() {
       .textContent =
         "仔細聽聽看！你想像中的生物會長什麼樣子呢？";
 
-    getElement("awReplay")
-      .disabled = !currentSound;
-getElement("awScan")
-  .disabled = false;
+    setProgress(0);
+
+    setProgressVisible(false);
+
+    updateReplayButton();
+
     if (!currentSound) {
+
+      playbackState = "error";
 
       setStatus(
         "這個園區尚未準備聲音。",
@@ -1235,15 +1470,21 @@ getElement("awScan")
       return;
     }
 
-    // 提供後續掃描及共同世界使用
+    // 保留原本的園區選擇事件
 
     window.dispatchEvent(
+
       new CustomEvent(
+
         "mindspace:animal-zone-selected",
+
         {
           detail: {
+
             zoneId: currentZone.id,
+
             soundId: currentSound.id,
+
             sourceWorld: "animal"
           }
         }
@@ -1254,7 +1495,7 @@ getElement("awScan")
   }
 
   // =========================================
-  // 12. 清除播放動畫
+  // 16. 清除播放動畫
   // =========================================
 
   function clearPlayingAnimation() {
@@ -1270,7 +1511,10 @@ getElement("awScan")
   }
 
   // =========================================
-  // 13. 停止聲音
+  // 17. 停止聲音
+  //
+  // playbackToken 防止舊音檔事件
+  // 影響目前選擇的園區。
   // =========================================
 
   function stopSound() {
@@ -1303,8 +1547,49 @@ getElement("awScan")
   }
 
   // =========================================
-  // 14. 播放真實音檔
-  // 不使用假音效或模擬動物叫聲
+  // 18. 聲音播放失敗
+  // =========================================
+
+  function handlePlaybackError(
+    sound,
+    error
+  ) {
+
+    stopSound();
+
+    playbackState = "error";
+
+    lockScan();
+
+    clearPlayingAnimation();
+
+    setProgress(0);
+
+    setProgressVisible(false);
+
+    updateReplayButton();
+
+    setStatus(
+      "聲音播放失敗，請再試一次。",
+      true
+    );
+
+    console.warn(
+
+      "[Animal World] Audio playback failed:",
+
+      sound.file,
+
+      error
+    );
+  }
+
+  // =========================================
+  // 19. 播放真實動物音檔
+  //
+  // 不使用模擬聲音
+  // 不使用固定秒數解鎖
+  // 必須收到真正的 ended 事件
   // =========================================
 
   async function playSound() {
@@ -1316,12 +1601,25 @@ getElement("awScan")
 
     stopSound();
 
+    // 每次播放都重新鎖定掃描
+
+    lockScan();
+
+    playbackState = "loading";
+
+    setProgress(0);
+
+    setProgressVisible(true);
+
+    updateReplayButton();
+
     const token = playbackToken;
 
     const sound = currentSound;
 
-    const player =
-      new Audio(sound.file);
+    const zoneId = currentZone.id;
+
+    const player = new Audio();
 
     audio = player;
 
@@ -1329,17 +1627,41 @@ getElement("awScan")
 
     player.volume = 0.8;
 
+    player.loop = false;
+
     setStatus(
       "正在載入神秘聲音……"
     );
 
+    // 確認事件仍屬於目前音檔
+
+    function isCurrentPlayback() {
+
+      return (
+
+        token === playbackToken &&
+
+        audio === player &&
+
+        currentZone?.id === zoneId &&
+
+        currentSound?.id === sound.id
+      );
+    }
+
+    // -------------------------------------
+    // 開始真正播放
+    // -------------------------------------
+
     player.addEventListener(
+
       "playing",
+
       () => {
 
-        if (
-          token !== playbackToken
-        ) return;
+        if (!isCurrentPlayback()) return;
+
+        playbackState = "playing";
 
         if (activeButton) {
 
@@ -1354,13 +1676,23 @@ getElement("awScan")
       }
     );
 
+    // -------------------------------------
+    // 等待音檔載入
+    // -------------------------------------
+
     player.addEventListener(
+
       "waiting",
+
       () => {
 
-        if (
-          token !== playbackToken
-        ) return;
+        if (!isCurrentPlayback()) return;
+
+        if (player.ended) return;
+
+        playbackState = "loading";
+
+        lockScan();
 
         clearPlayingAnimation();
 
@@ -1370,51 +1702,155 @@ getElement("awScan")
       }
     );
 
+    // -------------------------------------
+    // 音檔播放進度
+    // -------------------------------------
+
     player.addEventListener(
-      "ended",
+
+      "timeupdate",
+
       () => {
 
+        if (!isCurrentPlayback()) return;
+
         if (
-          token !== playbackToken
+
+          !Number.isFinite(player.duration) ||
+
+          player.duration <= 0
+
         ) return;
+
+        const percent =
+
+          player.currentTime /
+
+          player.duration *
+
+          100;
+
+        setProgress(percent);
+      }
+    );
+
+    // -------------------------------------
+    // 暫停播放
+    // -------------------------------------
+
+    player.addEventListener(
+
+      "pause",
+
+      () => {
+
+        if (!isCurrentPlayback()) return;
+
+        if (player.ended) return;
+
+        playbackState = "paused";
+
+        lockScan();
 
         clearPlayingAnimation();
 
         setStatus(
-          "聽完了！用 Plus-Plus 拼出你想像中的生物吧！"
+          "聲音已暫停，請再聽一次。"
         );
       }
     );
 
+    // -------------------------------------
+    // 真正完整播放結束
+    // 只有這裡可以解鎖掃描
+    // -------------------------------------
+
     player.addEventListener(
-      "error",
+
+      "ended",
+
       () => {
 
-        if (
-          token !== playbackToken
-        ) return;
+        if (!isCurrentPlayback()) return;
+
+        playbackState = "completed";
 
         clearPlayingAnimation();
 
-        setStatus(
-          "聲音尚未準備完成，請稍後再試。",
+        setProgress(
+          100,
           true
         );
 
-        console.warn(
-          "[Animal World] Audio missing:",
-          sound.file
+        unlockScan();
+
+        updateReplayButton();
+
+        getElement("awDescription")
+          .textContent =
+            "用 Plus-Plus 拼出你想像中的生物吧！";
+
+        setStatus(
+          "聽完了！完成積木創作後，就可以掃描作品囉！",
+          false,
+          true
+        );
+
+        window.dispatchEvent(
+
+          new CustomEvent(
+
+            "mindspace:animal-sound-completed",
+
+            {
+              detail: {
+
+                zoneId: zoneId,
+
+                soundId: sound.id,
+
+                sourceWorld: "animal"
+              }
+            }
+          )
         );
       }
     );
+
+    // -------------------------------------
+    // 音檔載入或解碼失敗
+    // -------------------------------------
+
+    player.addEventListener(
+
+      "error",
+
+      () => {
+
+        if (!isCurrentPlayback()) return;
+
+        handlePlaybackError(
+
+          sound,
+
+          player.error
+        );
+      }
+    );
+
+    // 設定真實音檔來源
+
+    player.src = sound.file;
+
+    // -------------------------------------
+    // 開始播放
+    // -------------------------------------
 
     try {
 
       await player.play();
 
-      if (
-        token !== playbackToken
-      ) {
+      if (!isCurrentPlayback()) {
 
         player.pause();
 
@@ -1423,38 +1859,38 @@ getElement("awScan")
 
     } catch (error) {
 
-      if (
-        token !== playbackToken
-      ) return;
+      if (!isCurrentPlayback()) return;
 
-      clearPlayingAnimation();
+      handlePlaybackError(
 
-      setStatus(
-        "目前無法播放聲音，請確認音檔已上傳。",
-        true
-      );
+        sound,
 
-      console.warn(
-        "[Animal World] Playback failed:",
-        sound.file,
         error
       );
     }
   }
 
   // =========================================
-  // 15. 重播同一個聲音
+  // 20. 重播同一個聲音
+  // 不重新隨機抽取
   // =========================================
 
   function replaySound() {
 
-    if (!currentSound) return;
+    if (
+      !currentZone ||
+      !currentSound
+    ) return;
+
+    getElement("awDescription")
+      .textContent =
+        "仔細聽聽看！你想像中的生物會長什麼樣子呢？";
 
     playSound();
   }
 
   // =========================================
-  // 16. 重置暫時探索狀態
+  // 21. 重置暫時探索狀態
   //
   // 不會清空任何既有作品
   // 不會刪除 Firebase 資料
@@ -1472,17 +1908,25 @@ getElement("awScan")
 
     activeButton = null;
 
+    playbackState = "idle";
+
+    soundCompleted = false;
+
     for (const button of
       speakerButtons.values()
     ) {
 
       button.classList.remove(
+
         "aw-selected",
+
         "aw-playing"
       );
 
       button.setAttribute(
+
         "aria-pressed",
+
         "false"
       );
     }
@@ -1497,30 +1941,48 @@ getElement("awScan")
       .textContent =
         "點擊黃色喇叭，聽聽神秘的動物聲音！";
 
-    getElement("awReplay")
-      .disabled = true;
-getElement("awScan")
-  .disabled = true;
+    lockScan();
+
+    updateReplayButton();
+
+    setProgress(0);
+
+    setProgressVisible(false);
+
     setStatus("");
+
+    setPanelVisible(false);
 
     const mapImage =
       getElement("awMapImage");
 
     if (
-      mapImage &&
-      mapImage.complete &&
-      !mapImage.naturalWidth
+
+      mapLoadFailed ||
+
+      (
+        mapImage &&
+        mapImage.complete &&
+        !mapImage.naturalWidth
+      )
+
     ) {
+
+      setPanelVisible(true);
 
       setStatus(
         "地圖載入失敗，請確認圖片路徑。",
         true
       );
     }
+
+    console.info(
+      "[Animal World] New exploration session"
+    );
   }
 
   // =========================================
-  // 17. 開啟動物世界
+  // 22. 開啟動物世界
   // =========================================
 
   function open() {
@@ -1534,15 +1996,12 @@ getElement("awScan")
     root.scrollTop = 0;
 
     console.info(
-      "[Mindspace Animal World] V2 opened"
+      "[Mindspace Animal World] V3 opened"
     );
   }
 
   // =========================================
-  // 18. 關閉動物世界
-  //
-  // 下方原本的神秘題目選單
-  // 保持不變。
+  // 23. 關閉動物世界
   // =========================================
 
   function close() {
@@ -1560,7 +2019,10 @@ getElement("awScan")
   }
 
   // =========================================
-  // 19. 返回動物園總覽
+  // 24. 返回動物園總覽
+  //
+  // 保留同一探索階段的聲音
+  // 但中途停止的聲音不能解鎖掃描
   // =========================================
 
   function showOverview() {
@@ -1569,13 +2031,37 @@ getElement("awScan")
 
     stopSound();
 
+    if (
+
+      playbackState === "playing" ||
+
+      playbackState === "loading"
+
+    ) {
+
+      playbackState = "paused";
+
+      lockScan();
+
+      setStatus(
+        "請再聽一次神秘聲音。"
+      );
+    }
+
     root.hidden = false;
 
     root.scrollTop = 0;
+
+    setPanelVisible(
+
+      Boolean(currentZone) ||
+
+      mapLoadFailed
+    );
   }
 
   // =========================================
-  // 20. 初始化
+  // 25. 初始化
   // =========================================
 
   function initialize() {
@@ -1583,11 +2069,15 @@ getElement("awScan")
     createInterface();
 
     window.addEventListener(
+
       "mindspace:mode-change",
+
       event => {
 
         if (
+
           event.detail?.mode === "home"
+
         ) {
 
           close();
@@ -1596,18 +2086,19 @@ getElement("awScan")
     );
 
     console.info(
-      "[Mindspace Animal World] V2 已載入"
+      "[Mindspace Animal World] V3 已載入"
     );
   }
 
   // =========================================
-  // 21. 公開 API
-  // 保留 V1 的 getCurrentZone 回傳格式
+  // 26. 公開 API
+  //
+  // 保留原本 V2 所有公開接口
   // =========================================
 
   window.MindspaceAnimalWorld = {
 
-    version: "2.0.0",
+    version: "3.0.0",
 
     open,
 
@@ -1620,21 +2111,26 @@ getElement("awScan")
     replaySound,
 
     getCurrentZone: () =>
+
       currentZone?.id || null,
 
     getCurrentSoundId: () =>
+
       currentSound?.id || null,
 
     getCurrentZoneData: () => {
 
       if (!currentZone) {
+
         return null;
       }
 
       return {
+
         ...currentZone,
 
         sounds: currentZone.sounds.map(
+
           sound => ({ ...sound })
         )
       };
@@ -1647,23 +2143,56 @@ getElement("awScan")
         ...zone,
 
         sounds: zone.sounds.map(
+
           sound => ({ ...sound })
         )
-
       }));
     },
 
     isOpen: () =>
-      Boolean(root && !root.hidden)
+
+      Boolean(root && !root.hidden),
+
+    // V3 新增聲音狀態接口
+
+    isSoundCompleted: () =>
+
+      soundCompleted,
+
+    getPlaybackState: () =>
+
+      playbackState,
+
+    canScan: () =>
+
+      Boolean(
+
+        currentZone &&
+
+        currentSound &&
+
+        soundCompleted &&
+
+        playbackState === "completed"
+      )
   };
 
+  // =========================================
+  // 27. 啟動
+  // =========================================
+
   if (
+
     document.readyState === "loading"
+
   ) {
 
     document.addEventListener(
+
       "DOMContentLoaded",
+
       initialize,
+
       { once: true }
     );
 

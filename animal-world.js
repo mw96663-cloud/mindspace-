@@ -134,7 +134,17 @@
 
   let mapLoadFailed = false;
 
-  const sessionSounds = new Map();
+  // 各園區目前尚未完成的探索聲音
+const sessionSounds = new Map();
+
+// 各園區尚未完成的聲音清單
+const zoneSoundQueues = new Map();
+
+// 各園區上一次完成的聲音
+const lastCompletedSounds = new Map();
+
+// 已處理的作品 ID，避免重複計算
+const completedCreationIds = new Set();
 
   const speakerButtons = new Map();
 
@@ -1282,40 +1292,281 @@
   // 保留第一次抽到的聲音。
   // =========================================
 
-  function getRandomSound(zone) {
+  // =========================================
+// V4｜各園區獨立洗牌
+// =========================================
 
-    if (!zone.sounds.length) {
+function shuffleSounds(sounds) {
 
-      return null;
-    }
+  const result = [...sounds];
 
-    if (sessionSounds.has(zone.id)) {
+  for (let i = result.length - 1; i > 0; i--) {
 
-      return sessionSounds.get(
-        zone.id
-      );
-    }
-
-    const index = Math.floor(
-      Math.random() *
-      zone.sounds.length
+    const j = Math.floor(
+      Math.random() * (i + 1)
     );
 
-    const sound =
-      zone.sounds[index];
-
-    sessionSounds.set(
-      zone.id,
-      sound
-    );
-
-    return sound;
+    [result[i], result[j]] = [
+      result[j],
+      result[i]
+    ];
   }
+
+  return result;
+}
+
+// =========================================
+// V4｜建立新一輪聲音清單
+// 避免與上一輪最後一個聲音重複
+// =========================================
+
+function createSoundQueue(zone) {
+
+  const queue = shuffleSounds(
+    zone.sounds
+  );
+
+  const lastSoundId =
+    lastCompletedSounds.get(zone.id);
+
+  if (
+    queue.length > 1 &&
+    queue[0].id === lastSoundId
+  ) {
+
+    const swapIndex =
+      1 + Math.floor(
+        Math.random() * (queue.length - 1)
+      );
+
+    [queue[0], queue[swapIndex]] = [
+      queue[swapIndex],
+      queue[0]
+    ];
+  }
+
+  zoneSoundQueues.set(
+    zone.id,
+    queue
+  );
+
+  return queue;
+}
+
+// =========================================
+// V4｜取得目前探索的聲音
+// 尚未完成作品前不更換
+// =========================================
+
+function getRandomSound(zone) {
+
+  if (!zone.sounds.length) {
+
+    return null;
+  }
+
+  // 尚未完成的探索維持原本聲音
+
+  if (sessionSounds.has(zone.id)) {
+
+    return sessionSounds.get(
+      zone.id
+    );
+  }
+
+  let queue =
+    zoneSoundQueues.get(zone.id);
+
+  // 三種聲音全部完成後才重新洗牌
+
+  if (!queue || queue.length === 0) {
+
+    queue = createSoundQueue(zone);
+  }
+
+  // 先取得聲音，但不移除
+  // 必須完成雲端儲存才正式消耗
+
+  const sound = queue[0];
+
+  sessionSounds.set(
+    zone.id,
+    sound
+  );
+
+  console.info(
+    "[Animal World V4] 開始探索",
+    {
+      zoneId: zone.id,
+      soundId: sound.id,
+      remaining: queue.length
+    }
+  );
+
+  return sound;
+}
 
   // =========================================
   // 14. 動物世界正式掃描入口
   // =========================================
+// =========================================
+// V4｜完成目前園區的聲音探索
+//
+// 只接受 Firebase 儲存成功事件
+// 不因拍照或去背完成而提前更換
+// =========================================
 
+function handleAnimalCreationSaved(event) {
+
+  const detail = event.detail || {};
+
+  const creationId = detail.id;
+
+  const zoneId = detail.zoneId;
+
+  const soundId = detail.soundId;
+
+  if (
+    !creationId ||
+    !zoneId ||
+    !soundId
+  ) {
+
+    return;
+  }
+
+  // 防止同一件作品重複完成探索
+
+  if (
+    completedCreationIds.has(creationId)
+  ) {
+
+    return;
+  }
+
+  completedCreationIds.add(
+    creationId
+  );
+
+  const assignedSound =
+    sessionSounds.get(zoneId);
+
+  // 必須符合該園區目前的探索聲音
+
+  if (
+    !assignedSound ||
+    assignedSound.id !== soundId
+  ) {
+
+    return;
+  }
+
+  const queue =
+    zoneSoundQueues.get(zoneId);
+
+  // 完成目前聲音，移出待探索清單
+
+  if (queue) {
+
+    const index = queue.findIndex(
+      sound => sound.id === soundId
+    );
+
+    if (index !== -1) {
+
+      queue.splice(index, 1);
+    }
+  }
+
+  // 紀錄上一個完成的聲音
+
+  lastCompletedSounds.set(
+    zoneId,
+    soundId
+  );
+
+  // 解除該園區目前的聲音綁定
+
+  sessionSounds.delete(zoneId);
+
+  // 若完成的是目前選擇的園區
+  // 清除暫時介面狀態
+
+  if (
+    currentZone?.id === zoneId &&
+    currentSound?.id === soundId
+  ) {
+
+    stopSound();
+
+    lockScan();
+
+    playbackState = "idle";
+
+    currentSound = null;
+
+    currentZone = null;
+
+    activeButton = null;
+
+    for (const button of
+      speakerButtons.values()
+    ) {
+
+      button.classList.remove(
+        "aw-selected",
+        "aw-playing"
+      );
+
+      button.setAttribute(
+        "aria-pressed",
+        "false"
+      );
+    }
+
+    updateReplayButton();
+
+    setProgress(0);
+
+    setProgressVisible(false);
+
+    setPanelVisible(false);
+  }
+
+  console.info(
+    "[Animal World V4] 本次探索完成",
+    {
+      creationId,
+      zoneId,
+      soundId,
+      remaining: queue?.length || 0
+    }
+  );
+
+  // 提供後續擴充使用
+
+  window.dispatchEvent(
+
+    new CustomEvent(
+
+      "mindspace:animal-exploration-completed",
+
+      {
+        detail: {
+
+          creationId,
+
+          zoneId,
+
+          soundId,
+
+          remainingSounds:
+            queue?.length || 0
+        }
+      }
+    )
+  );
+}
   function requestAnimalScan() {
 
     if (
@@ -1900,8 +2151,6 @@
 
     stopSound();
 
-    sessionSounds.clear();
-
     currentZone = null;
 
     currentSound = null;
@@ -2066,29 +2315,40 @@
 
   function initialize() {
 
-    createInterface();
+  createInterface();
 
-    window.addEventListener(
+  // 監聽真正的 Firebase 作品儲存成功事件
 
-      "mindspace:mode-change",
+  window.addEventListener(
 
-      event => {
+    "mindspace-animal-creation-saved",
 
-        if (
+    handleAnimalCreationSaved
+  );
 
-          event.detail?.mode === "home"
+  // 保留原本首頁模式切換
 
-        ) {
+  window.addEventListener(
 
-          close();
-        }
+    "mindspace:mode-change",
+
+    event => {
+
+      if (
+
+        event.detail?.mode === "home"
+
+      ) {
+
+        close();
       }
-    );
+    }
+  );
 
-    console.info(
-      "[Mindspace Animal World] V3 已載入"
-    );
-  }
+  console.info(
+    "[Mindspace Animal World] V4 已載入"
+  );
+}
 
   // =========================================
   // 26. 公開 API
@@ -2098,8 +2358,38 @@
 
   window.MindspaceAnimalWorld = {
 
-    version: "3.0.0",
+    version: "4.0.0",
+    // V4｜取得指定園區的探索紀錄
 
+getExplorationState: (zoneId) => {
+
+  const zone = ZONES.find(
+    item => item.id === zoneId
+  );
+
+  if (!zone) {
+
+    return null;
+  }
+
+  return {
+
+    zoneId,
+
+    currentSound:
+      sessionSounds.get(zoneId)?.id || null,
+
+    lastCompletedSound:
+      lastCompletedSounds.get(zoneId) || null,
+
+    remainingSounds:
+      (zoneSoundQueues.get(zoneId) || [])
+        .map(sound => sound.id),
+
+    totalSounds:
+      zone.sounds.length
+  };
+},
     open,
 
     close,

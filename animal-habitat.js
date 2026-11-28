@@ -637,11 +637,10 @@
       "共同棲地"
     );
 
-    scanButton = makeButton(
-      "📷 新增作品",
-      requestScan
-    );
-
+   scanButton = makeButton(
+  "🔊 再次探索",
+  requestScan
+);
     toolbar.append(
       backButton,
       titleElement,
@@ -2167,24 +2166,28 @@
 
   function returnToOverview() {
 
-    if (getPendingCount() > 0) {
+  // 必須完成雲端儲存
+  // 避免尚未儲存的作品被遺忘
 
-      const confirmed = window.confirm(
+  if (getPendingCount() > 0) {
 
-        "還有作品尚未完成雲端儲存。"
-        + "返回後仍可重試，"
-        + "但請勿重新整理或關閉網頁。"
-        + "確定要返回嗎？"
-      );
+    setStatus(
 
-      if (!confirmed) return;
-    }
+      "作品尚未完成雲端儲存。"
+      + "請等待儲存完成，"
+      + "或點擊重新儲存作品。",
 
-    close();
+      true
+    );
 
-    window.MindspaceAnimalWorld
-      ?.showOverview?.();
+    return;
   }
+
+  close();
+
+  window.MindspaceAnimalWorld
+    ?.showOverview?.();
+}
 
   // ==========================================
   // 21｜掃描入口
@@ -2193,34 +2196,36 @@
   // 下一階段串接原本相機。
   // ==========================================
 
-  function requestScan() {
+  // ==========================================
+// V4｜開始下一次感官探索
+// 不直接跳過聲音進入相機
+// ==========================================
 
-    if (!currentHabitat) return;
+function requestScan() {
 
-    window.dispatchEvent(
+  if (!currentHabitat) return;
 
-      new CustomEvent(
+  // 尚有作品等待雲端儲存時
+  // 先完成原本的作品
 
-        "mindspace-animal-scan-requested",
-
-        {
-          detail: {
-
-            zoneId: currentHabitat.id,
-
-            soundId: currentSoundId,
-
-            sourceWorld: "animal"
-          }
-        }
-      )
-    );
+  if (getPendingCount() > 0) {
 
     setStatus(
-      "掃描入口已準備，等待相機流程串接。"
+
+      "請先完成目前作品的雲端儲存，"
+      + "再開始下一次探索。",
+
+      true
     );
+
+    return;
   }
 
+  // 返回動物園地圖
+  // 由兒童自行選擇下一個探索園區
+
+  returnToOverview();
+}
   // ==========================================
   // 22｜避免未儲存作品意外遺失
   // ==========================================
@@ -2246,7 +2251,7 @@
 
   window.MindspaceAnimalHabitat = {
 
-    version: "1.0.0",
+    version: "1.1.0",
 
     open,
 
